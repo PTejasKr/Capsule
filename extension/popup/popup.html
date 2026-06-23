@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capsule PR Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-group">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M12 8v8"/>
+          <path d="M8 12h8"/>
+        </svg>
+        <span class="logo-text">Capsule</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-refresh" title="Refresh Analysis" class="icon-button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        </button>
+        <button id="btn-settings" title="Settings" class="icon-button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+      <button class="tab-button active" id="tab-pr">Current PR</button>
+      <button class="tab-button" id="tab-weekly">Weekly Changes</button>
+      <button class="tab-button" id="tab-workflow">Workflow Diagram</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="app-body">
+      <!-- Error / Empty State -->
+      <div id="state-no-pr" class="state-card hidden">
+        <div class="state-icon">⚠️</div>
+        <h3>No PR Detected</h3>
+        <p>Navigate to a GitHub Pull Request page to view the Capsule analysis.</p>
+      </div>
+
+      <div id="state-error" class="state-card hidden">
+        <div class="state-icon">❌</div>
+        <h3>Analysis Error</h3>
+        <p id="error-message">Could not fetch PR summary. Check your server connection or API key settings.</p>
+        <button id="btn-retry" class="btn btn-primary">Retry Connection</button>
+      </div>
+
+      <!-- Loading skeleton -->
+      <div id="state-loading" class="state-card">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-text"></div>
+        <div class="skeleton-text"></div>
+        <div class="skeleton-card"></div>
+      </div>
+
+      <!-- Main Dashboard view -->
+      <div id="dashboard-content" class="hidden">
+        <!-- Tab Panel: Current PR Summary -->
+        <div id="panel-pr" class="tab-panel">
+        <!-- PR Info Badge -->
+        <div class="pr-info-card">
+          <div class="pr-title-row">
+            <span id="pr-number" class="pr-badge">PR #--</span>
+            <span id="pr-repo" class="repo-badge">owner/repo</span>
+          </div>
+          <h2 id="pr-title">Loading PR Title...</h2>
+        </div>
+
+        <!-- Workflow Change Banner -->
+        <div id="workflow-impact-banner" class="impact-banner banner-none">
+          <div class="banner-icon-container">
+            <svg id="wf-icon-green" class="banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg id="wf-icon-yellow" class="banner-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg id="wf-icon-red" class="banner-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="banner-text">
+            <h4 id="workflow-status-title">No Workflow Impact</h4>
+            <p id="workflow-status-desc">No BRD business processes are modified by these changes.</p>
+          </div>
+        </div>
+
+        <!-- High-level AI Summary -->
+        <div class="content-card">
+          <h3>AI Analysis Summary</h3>
+          <p id="ai-summary-text" class="summary-paragraph">Summary details loading...</p>
+          <div class="confidence-container">
+            <span class="confidence-label">Confidence:</span>
+            <div class="confidence-bar-bg">
+              <div id="confidence-bar" class="confidence-bar-fill" style="width: 0%"></div>
+            </div>
+            <span id="confidence-text">0%</span>
+          </div>
+        </div>
+
+        <!-- Technical Changes List -->
+        <div class="accordion-item">
+          <button class="accordion-trigger" id="btn-toggle-changes">
+            <span>Detailed Code Changes (<span id="changes-count">0</span>)</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-content hidden" id="changes-list-container">
+            <ul id="changes-list" class="technical-changes-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Release Changelog Preview -->
+        <div class="accordion-item">
+          <button class="accordion-trigger" id="btn-toggle-changelog">
+            <span>Changelog Preview (<span id="changelog-version">v0.0.0</span>)</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-content hidden" id="changelog-preview-container">
+            <div class="preview-box">
+              <pre id="changelog-text">Changelog text rendering...</pre>
+              <button id="btn-copy-changelog" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+
+        </div> <!-- End of panel-pr -->
+
+        <!-- Tab Panel: Weekly Changes -->
+        <div id="panel-weekly" class="tab-panel hidden">
+          <div class="content-card">
+            <h3>Weekly Summary (Last 7 Days)</h3>
+            <div id="weekly-loading" class="state-card" style="margin-top: 10px;">
+              <div class="skeleton-text"></div>
+              <div class="skeleton-text"></div>
+            </div>
+            <div id="weekly-empty" class="state-card hidden">
+              <p>No changes analyzed in the past 7 days.</p>
+            </div>
+            <ul id="weekly-list" class="technical-changes-list hidden" style="margin-top: 10px;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Tab Panel: Workflow Diagram Generator -->
+        <div id="panel-workflow" class="tab-panel hidden">
+          <div class="content-card">
+            <h3>Workflow Diagram Generator</h3>
+            <p class="description" style="color: var(--text-muted); margin-bottom: 12px; font-size: 12px; margin-top: 4px;">
+              Generate or update the system workflow diagram from the active BRD processes using Workers AI.
+            </p>
+            <div class="input-group">
+              <textarea id="wf-prompt-input" placeholder="Describe the workflow processes / rules from the BRD (e.g. User submits order, payment transition flow)..." rows="4"></textarea>
+            </div>
+            <button id="btn-generate-wf" class="btn btn-primary">Generate Workflow Image</button>
+            
+            <div id="wf-image-loading" class="state-card hidden" style="margin-top: 16px;">
+              <div class="skeleton-card"></div>
+              <p style="margin-top: 8px;">Generating workflow diagram via Cloudflare Workers AI...</p>
+            </div>
+            
+            <div id="wf-image-container" class="image-preview-container hidden">
+              <img id="wf-generated-img" alt="Generated Workflow Diagram" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

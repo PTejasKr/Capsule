@@ -1,0 +1,384 @@
+================================================================================
+  CAPSULE — AI-Powered PR Analysis & Release System
+  Implementation Ideas & Project Specification
+  Date: 2026-06-17
+================================================================================
+
+PROJECT OVERVIEW
+================
+An intelligent CI/CD companion that analyzes GitHub Pull Requests against a
+Business Requirement Document (BRD), generates summaries for admin approval,
+detects workflow changes, and maintains versioned changelogs — all integrated
+with Jenkins pipelines.
+
+CORE REQUIREMENTS (From Manager)
+=================================
+1. Extension/tool that runs alongside GitHub PR approval workflow
+2. When a PR merge request is raised against main branch:
+   - AI reads and analyzes the merge request contents
+   - Generates a summarized view for the admin in a browser extension
+   - Admin reviews summary before approving/rejecting the PR
+3. On merge approval + completion:
+   - Creates a changelog.txt with versioning
+   - Includes lines changed per commit
+   - Pushes changelog to a SEPARATE repository
+4. Workflow change detection:
+   - AI maintains persistent memory of the initial BRD workflow
+   - Compares every merge against the original BRD
+   - Notifies admin if merge will cause workflow changes
+   - Shows before/after workflow state
+5. Changelog rules:
+   - Only technical changes and workflow diagram changes
+   - No feature descriptions — pure technical log
+6. Must work with Jenkins CI/CD pipelines
+7. AI must NOT hallucinate — strong guardrails required
+
+
+TECH STACK DECISIONS
+====================
+- AI Model:      NVIDIA NIM + Meta Llama 3.1 70B Instruct
+- Guardrails:    NVIDIA NeMo Guardrails (input/output safety rails)
+- Backend:       Python 3.12+ (FastAPI)
+- Database:      SQLite (lightweight, no external DB dependency)
+- Extension:     Chrome Extension (Manifest V3)
+- CI/CD:         Jenkins (Generic Webhook Trigger Plugin)
+- GitHub API:    PyGithub library + REST API
+- Auth:          HMAC-SHA256 webhooks, API key auth
+
+
+ARCHITECTURE
+============
+
+  GitHub PR Event
+       |
+       v
+  Jenkins Pipeline (Generic Webhook Trigger)
+       |
+       v
+  Backend API (FastAPI)
+       |
+       +---> GitHub Service (fetch PR diff, files, commits)
+       |          |
+       |          v
+       +---> AI Engine (NVIDIA NIM / Llama 3.1 70B)
+       |          |
+       |          +---> BRD Manager (persistent BRD memory)
+       |          +---> NeMo Guardrails (input/output safety)
+       |          +---> Cross-Validation (verify AI output vs actual diff)
+       |          |
+       |          v
+       +---> Summary Generator --> Chrome Extension (admin views summary)
+       |
+       +---> Workflow Change Detector --> Alert in Extension
+       |
+       +---> Changelog Generator --> Push to separate repo via GitHub API
+
+
+COMPONENT BREAKDOWN
+===================
+
+--- COMPONENT 1: Backend API (Python FastAPI) ---
+
+Files to create:
+  backend/
+  ├── main.py                    # FastAPI app entry point, CORS, startup
+  ├── config.py                  # Env var management (Pydantic Settings)
+  ├── database.py                # SQLite setup (aiosqlite)
+  ├── models/
+  │   └── schemas.py             # Pydantic models for all data structures
+  ├── routers/
+  │   ├── webhooks.py            # POST /webhooks/github, /webhooks/jenkins
+  │   └── api.py                 # GET /api/pr/{id}/summary, /workflow-impact
+  ├── services/
+  │   ├── github_service.py      # Fetch PR diffs, push changelog to repo
+  │   ├── ai_engine.py           # NVIDIA NIM integration, analysis logic
+  │   ├── guardrails.py          # NeMo Guardrails config & validation
+  │   ├── brd_manager.py         # BRD storage, versioning, workflow extraction
+  │   └── changelog_service.py   # Changelog generation, versioning, repo push
+  ├── middleware/
+  │   └── security.py            # HMAC verification, API key auth, rate limiting
+  ├── requirements.txt
+  ├── Dockerfile
+  └── .env.example
+
+Key endpoints:
+  POST /webhooks/github           - Receives GitHub PR webhook events
+  POST /webhooks/jenkins          - Receives Jenkins pipeline notifications
+  GET  /api/pr/{num}/summary      - Returns AI-generated PR summary
+  GET  /api/pr/{num}/workflow-impact - Returns workflow change analysis
+  GET  /api/pr/{num}/changelog-preview - Preview changelog entry
+  POST /api/brd/upload            - Upload/update BRD document
+  GET  /api/health                - Health check
+
+Database tables (SQLite):
+  - brd_versions      : Version history of BRD documents
+  - pr_analyses       : Cached PR analysis results
+  - changelog_entries : All generated changelog entries
+  - audit_log         : Every AI call logged with input/output
+
+
+--- COMPONENT 2: AI ENGINE (NVIDIA NIM + NeMo Guardrails) ---
+
+Model: meta/llama-3.1-70b-instruct via NVIDIA NIM API
+SDK:   OpenAI Python SDK (NIM is OpenAI-compatible)
+
+Integration pattern:
+  from openai import OpenAI
+
+  client = OpenAI(
+      base_url="https://integrate.api.nvidia.com/v1",
+      api_key=NVIDIA_NIM_API_KEY
+  )
+
+  response = client.chat.completions.create(
+      model="meta/llama-3.1-70b-instruct",
+      messages=[
+          {"role": "system", "content": system_prompt_with_brd},
+          {"role": "user", "content": f"Analyze this PR diff:\n\n{diff}"}
+      ],
+      temperature=0.1,
+      max_tokens=4096,
+      response_format={"type": "json_object"}
+  )
+
+Anti-Hallucination Architecture (8 Layers):
+  Layer 1: INPUT GROUNDING
+    - Only feed actual diff + BRD to the model
+    - No internet search, no external context, no training data reliance
+
+  Layer 2: STRUCTURED OUTPUT
+    - JSON mode + Pydantic model parsing
+    - Every output field is typed and constrained
+    - Fields: file, line_range, change_type, description, confidence
+
+  Layer 3: NEMO INPUT RAIL
+    - Prompt injection detection on PR content
+    - Sanitize code content before sending to AI
+    - Block attempts to override system instructions
+
+  Layer 4: NEMO OUTPUT RAIL
+    - Fact-checking rail validates AI output
+    - Cross-check every file/line reference against actual diff
+    - Reject any reference to files not present in the PR
+
+  Layer 5: TEMPERATURE CONTROL
+    - temperature=0.1 for near-deterministic responses
+    - Minimizes creative/speculative outputs
+
+  Layer 6: CONFIDENCE SCORING
+    - AI self-reports confidence (0.0-1.0) for each finding
+    - Items below 0.7 flagged for human review
+    - Admin sees confidence scores in extension
+
+  Layer 7: DIFF-ONLY PROMPTING
+    - System instruction: "Only describe changes present in the diff.
+      Do not infer, speculate, or add context beyond the diff and BRD."
+    - Explicit anti-hallucination instructions in system prompt
+
+  Layer 8: AUDIT LOGGING
+    - Every AI call logged with timestamp, input hash, output, scores
+    - Full traceability for debugging and accountability
+
+NeMo Guardrails config (config/guardrails.yaml):
+  models:
+    - type: main
+      engine: nim
+      model: meta/llama-3.1-70b-instruct
+  rails:
+    input:
+      flows:
+        - check prompt injection
+        - sanitize code content
+    output:
+      flows:
+        - check hallucination
+        - validate file references
+        - enforce json schema
+
+
+--- COMPONENT 3: CHROME EXTENSION (Manifest V3) ---
+
+Files to create:
+  extension/
+  ├── manifest.json              # MV3 config, permissions, content scripts
+  ├── popup/
+  │   ├── popup.html             # Summary dashboard popup
+  │   ├── popup.js               # Fetch + render PR summary
+  │   └── popup.css              # Styling (dark/light theme)
+  ├── content/
+  │   └── content.js             # Injects panel into GitHub PR pages
+  ├── background/
+  │   └── service-worker.js      # API communication, auth, caching
+  ├── options/
+  │   ├── options.html           # Settings page
+  │   └── options.js             # API URL, key configuration
+  └── icons/
+      ├── icon16.png
+      ├── icon48.png
+      └── icon128.png
+
+Features:
+  - Detects when admin is on a GitHub PR page (github.com/*/pull/*)
+  - Injects floating panel near the merge button area
+  - Shows: PR title, AI summary, workflow impact alerts, changelog preview
+  - Color-coded severity:
+      GREEN  = No workflow change
+      YELLOW = Minor workflow change
+      RED    = Major workflow change (blocks merge recommendation)
+  - Dark/light theme matching GitHub's current theme
+  - Caches PR summaries to avoid redundant API calls
+  - API key stored securely in chrome.storage.local
+
+Security:
+  - Manifest V3 (no eval, CSP enforced)
+  - API calls go through service worker (not content script directly)
+  - No remote code loading
+  - Token never exposed to content scripts
+
+
+--- COMPONENT 4: JENKINS PIPELINE ---
+
+Files to create:
+  jenkins/
+  ├── Jenkinsfile                # Pipeline definition
+  └── setup.md                   # Jenkins configuration guide
+
+Jenkinsfile structure:
+  pipeline {
+      agent any
+      triggers {
+          GenericTrigger(
+              genericVariables: [
+                  [key: 'PR_NUMBER', value: '$.number'],
+                  [key: 'PR_ACTION', value: '$.action'],
+                  [key: 'PR_MERGED', value: '$.pull_request.merged'],
+                  [key: 'PR_BASE_REF', value: '$.pull_request.base.ref']
+              ],
+              causeString: 'PR #$PR_NUMBER $PR_ACTION',
+              token: 'capsule-pr-trigger',
+              regexpFilterText: '$PR_BASE_REF',
+              regexpFilterExpression: '^(main|master)$'
+          )
+      }
+      stages {
+          stage('Analyze PR') {
+              when { expression { env.PR_ACTION in ['opened', 'synchronize'] } }
+              steps { /* Call backend API to analyze PR */ }
+          }
+          stage('Generate Changelog') {
+              when { expression { env.PR_ACTION == 'closed' && env.PR_MERGED == 'true' } }
+              steps { /* Trigger changelog generation and push */ }
+          }
+      }
+  }
+
+Required Jenkins plugins:
+  - Generic Webhook Trigger Plugin
+  - HTTP Request Plugin
+  - GitHub Branch Source Plugin
+  - Credentials Plugin (for secrets)
+
+Jenkins credentials to configure:
+  - CAPSULE_API_URL (backend API base URL)
+  - CAPSULE_API_KEY (API key for authentication)
+  - GITHUB_TOKEN (for GitHub API access)
+
+
+--- COMPONENT 5: PROJECT CONFIG & DOCS ---
+
+Files to create:
+  capsule/
+  ├── README.md                  # Project overview, architecture, quick start
+  ├── docker-compose.yml         # Backend container + SQLite volume
+  ├── Dockerfile                 # Multi-stage build, non-root user
+  ├── .gitignore                 # Python + Node.js ignores
+  └── brd/
+      └── sample_brd.md          # Sample BRD template for testing
+
+
+SECURITY ARCHITECTURE
+=====================
+
+  Concern              | Mitigation
+  ---------------------|--------------------------------------------------
+  API Key Exposure     | All secrets in Jenkins Credentials + .env (never committed)
+  Webhook Forgery      | HMAC-SHA256 signature verification on all webhooks
+  Prompt Injection     | NeMo input rail + sanitization before AI processing
+  Extension Security   | MV3 (no eval, CSP enforced); chrome.storage for keys
+  Data Leakage         | BRD/diffs never sent to external logging services
+  Rate Limiting        | Per-IP and per-token limits on all API endpoints
+  Audit Trail          | Every AI call logged with timestamp, I/O, confidence
+  Least Privilege      | GitHub token scoped to minimum permissions only
+
+
+CHANGELOG FORMAT
+================
+Each entry in changelog.txt follows this format:
+
+  ## [v1.2.3] - 2026-06-17
+  ### Technical Changes
+  - [backend/api.py:L45-L67] Added rate limiting to /users endpoint
+  - [frontend/Dashboard.jsx:L12] Updated chart rendering logic
+  ### Workflow Changes
+  - User registration flow: Added email verification step
+    (was: direct signup -> dashboard)
+  ### Lines Changed: +142 / -38
+
+
+ENVIRONMENT VARIABLES
+=====================
+  GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+  GITHUB_WEBHOOK_SECRET=your-webhook-secret
+  NVIDIA_NIM_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxx
+  NVIDIA_NIM_BASE_URL=https://integrate.api.nvidia.com/v1
+  NVIDIA_NIM_MODEL=meta/llama-3.1-70b-instruct
+  CHANGELOG_REPO=owner/changelog-repo
+  JENKINS_API_TOKEN=your-jenkins-token
+  API_KEY=your-api-key-for-extension
+  BRD_FILE_PATH=./brd/requirements.md
+
+
+DEPENDENCIES (Python)
+=====================
+  fastapi==0.115.0
+  uvicorn==0.30.0
+  openai==1.82.0          # OpenAI SDK (NIM-compatible)
+  nemoguardrails==0.11.0   # NVIDIA NeMo Guardrails
+  PyGithub==2.5.0
+  pydantic==2.10.0
+  pydantic-settings==2.6.0
+  aiosqlite==0.20.0
+  httpx==0.28.0
+  python-multipart==0.0.18
+
+
+IMPLEMENTATION PHASES
+=====================
+  Phase 1: Backend API + AI Engine (core logic)
+  Phase 2: GitHub integration (webhooks + PR diff fetching)
+  Phase 3: Changelog generation + push to separate repo
+  Phase 4: Chrome Extension (admin summary dashboard)
+  Phase 5: Jenkins Pipeline integration
+  Phase 6: Security hardening + testing + documentation
+
+
+OPEN QUESTIONS FOR MANAGER
+===========================
+  1. BRD FORMAT: What format is the Business Requirement Document?
+     (Markdown, PDF, Word, plain text?)
+
+  2. HOSTING: Where should the backend API be hosted?
+     (Jenkins server, cloud VM, Docker, serverless?)
+
+  3. EXTENSION DISTRIBUTION: Chrome Web Store or internal side-loading?
+
+  4. VERSION NUMBERING: Semantic versioning (MAJOR.MINOR.PATCH)
+     or simple incremental (v1, v2, v3)?
+
+  5. NVIDIA NIM: Do you have an existing NVIDIA NIM API key /
+     enterprise account, or should we use the free tier?
+
+
+================================================================================
+  END OF IMPLEMENTATION IDEAS
+================================================================================

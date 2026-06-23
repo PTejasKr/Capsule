@@ -1,0 +1,21 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+openai==1.57.0
+PyGithub==2.5.0
+pydantic==2.10.0
+pydantic-settings==2.6.0
+aiosqlite==0.20.0
+httpx==0.28.0
+python-multipart==0.0.18
+python-jose[cryptography]==3.3.0
+pytest==8.3.0
+pytest-asyncio==0.24.0
+# Async task queue
+celery==5.4.0
+redis==5.0.4
+kombu==5.3.4
+# Retry & resilience
+tenacity==8.5.0
+# PostgreSQL driver
+asyncpg==0.30.0
+

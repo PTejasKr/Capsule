@@ -1,0 +1,71 @@
+# Program Flow Overview
+
+This document describes the overall flow of the **Capsule** application after recent enhancements, including the new PR analysis helper and expanded pipeline capabilities.
+
+---
+
+## High‑Level Workflow
+
+```mermaid
+flowchart TD
+    A[GitHub PR Event] -->|Webhook Trigger| B[backend/routers/webhooks.py]
+    B --> C[github_service.fetch_pr_title]
+    B --> D[github_service.fetch_pr_diff]
+    B --> E[github_service.fetch_pr_branch]
+    B --> F[brd_manager.get_latest_brd]
+    C & D & E & F --> G[backend/services/pr_analysis.run_pr_analysis]
+    G --> H[backend/services/ai_engine.AIEngine.analyze_pr]
+    H --> I[PRSummary (title, diff, branch, analysis, etc.)]
+    I --> J[backend/database.insert]
+    J --> K[Persisted PR summary in DB]
+    K --> L[Optional downstream actions (Jenkins pipeline, notifications, etc.)]
+```
+
+### Step‑by‑Step Description
+
+1. **GitHub PR Event** – A pull‑request event arrives via GitHub webhooks.
+2. **Webhook Router** – `backend/routers/webhooks.py` receives the payload and extracts the PR number.
+3. **Data Gathering** – Using the injected `github_service`:
+   - `fetch_pr_title(pr_number)`
+   - `fetch_pr_diff(pr_number)`
+   - `fetch_pr_branch(pr_number)` (new field).
+   - The `brd_manager` provides the latest Business Requirements Document.
+4. **PR Analysis Helper** – `backend/services/pr_analysis.run_pr_analysis` bundles the fetched data and calls the AI engine.
+5. **AI Engine** – `backend/services/ai_engine.AIEngine.analyze_pr` runs the LLM model, producing a `PRSummary` that now includes the **branch** name.
+6. **Persistence** – The summary is stored via `backend/database.insert`.
+7. **Post‑Processing** – The stored record can trigger further automation such as:
+   - Jenkins pipeline execution (already integrated elsewhere).
+   - Slack/Teams notifications.
+   - Dashboard updates.
+
+---
+
+## New Additions
+
+- **`branch` field** added to `PRSummary` schema (`backend/models/schemas.py`).
+- **`run_pr_analysis`** helper module (`backend/services/pr_analysis.py`) that orchestrates data collection and AI analysis.
+- Updated **AIEngine** signature to accept `branch_name: Optional[str]` and return it in the summary.
+
+---
+
+## Input Variations
+
+| Input Type | Source | Impact on Flow |
+|------------|--------|----------------|
+| PR Title   | GitHub | Used for context in LLM prompt. |
+| PR Diff    | GitHub | Core content for analysis. |
+| Branch Name| GitHub (new) | Included in `PRSummary.branch`. |
+| BRD        | Local BRD manager | Provides business context for LLM. |
+| Model Override | `model` param | Allows selecting a different LLM model for analysis. |
+
+---
+
+## Diagram Legend
+
+- **Rectangles** – Code modules / services.
+- **Arrows** – Data flow between components.
+- **Dashed arrows** – Optional downstream processes.
+
+---
+
+*Generated on 2026‑06‑22.*
