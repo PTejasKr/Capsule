@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     BRD_FILE_PATH: str = Field("./brd/requirements.md", description="Path to the Business Requirement Document")
     DATABASE_URL: str = Field("sqlite+aiosqlite:///./data/capsule.db", description="Database connection URL")
     LOG_LEVEL: str = Field("INFO", description="Log level (DEBUG, INFO, WARNING, ERROR)")
+    CLOUDFLARE_WORKER_URL: str = Field("http://localhost:8787", description="Cloudflare Worker URL for image generation and summaries")
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -2,7 +2,7 @@ import base64
 import logging
 import asyncio
 import httpx
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from backend.config import settings
 
 logger = logging.getLogger("capsule.github_service")
@@ -149,32 +149,94 @@ class GitHubService:
             for c in commits
         ]
 
-    async def push_changelog(self, path: str, content: str, commit_message: str, target_repo: str = None) -> Dict[str, Any]:
+    async def ensure_branch_exists(self, repo: str, branch: str = "changelog"):
         """
-        Pushes changelog.txt content to the configured separate changelog repository.
-        Uses GET to get the existing file SHA if it exists, then updates or creates it.
+        Ensures that the specified branch exists in the target repository.
+        If it doesn't exist, creates it from the default branch (e.g. main).
+        """
+        logger.info(f"Ensuring branch '{branch}' exists in repository '{repo}'...")
+        url_get_ref = f"{self.base_url}/repos/{repo}/git/ref/heads/{branch}"
+        
+        response = await self._request_with_backoff("GET", url_get_ref)
+        if response.status_code == 200:
+            logger.info(f"Branch '{branch}' already exists in '{repo}'")
+            return
+            
+        # Get repository default branch name
+        repo_url = f"{self.base_url}/repos/{repo}"
+        res_repo = await self._request_with_backoff("GET", repo_url)
+        default_branch = "main"
+        if res_repo.status_code == 200:
+            default_branch = res_repo.json().get("default_branch", "main")
+            
+        # Get latest commit SHA of default branch
+        default_ref_url = f"{self.base_url}/repos/{repo}/git/ref/heads/{default_branch}"
+        res_default = await self._request_with_backoff("GET", default_ref_url)
+        if res_default.status_code != 200:
+            logger.error(f"Failed to fetch default branch '{default_branch}' reference: {res_default.status_code}")
+            return
+            
+        sha = res_default.json().get("object", {}).get("sha")
+        if not sha:
+            logger.error("Could not find commit SHA for default branch")
+            return
+            
+        # Create new branch ref pointing to that SHA
+        create_ref_url = f"{self.base_url}/repos/{repo}/git/refs"
+        payload = {
+            "ref": f"refs/heads/{branch}",
+            "sha": sha
+        }
+        res_create = await self._request_with_backoff("POST", create_ref_url, json=payload)
+        if res_create.status_code == 201:
+            logger.info(f"Successfully created branch '{branch}' in '{repo}' from '{default_branch}'")
+        elif res_create.status_code == 422:
+            logger.info(f"Branch '{branch}' already exists (422 response)")
+        else:
+            logger.error(f"Failed to create branch '{branch}': {res_create.status_code} {res_create.text}")
+
+    async def push_changelog(
+        self,
+        path: str,
+        content: Union[str, bytes],
+        commit_message: str,
+        target_repo: str = None,
+        branch: str = "changelog"
+    ) -> Dict[str, Any]:
+        """
+        Pushes content (text or bytes) to the target repository at path on the specified branch.
         """
         repo = target_repo or settings.CHANGELOG_REPO
-        logger.info(f"Pushing changelog to repository {repo} at path {path}")
-        url = f"{self.base_url}/repos/{repo}/contents/{path}"
+        logger.info(f"Pushing content to repository {repo} on branch {branch} at path {path}")
         
-        # Check if file already exists to get its SHA
+        # Ensure the branch exists first
+        await self.ensure_branch_exists(repo, branch)
+        
+        url = f"{self.base_url}/repos/{repo}/contents/{path}"
+        url_get = f"{url}?ref={branch}"
+        
+        # Check if file already exists on this branch to get its SHA
         sha = None
-        response = await self._request_with_backoff("GET", url)
+        response = await self._request_with_backoff("GET", url_get)
         if response.status_code == 200:
             sha = response.json().get("sha")
-            logger.info(f"Existing file found with SHA: {sha}. Performing update.")
+            logger.info(f"Existing file found with SHA: {sha} on branch {branch}. Performing update.")
         elif response.status_code == 404:
-            logger.info("Changelog file does not exist yet. Creating a new one.")
+            logger.info(f"File {path} does not exist yet on branch {branch}. Creating a new one.")
         else:
-            logger.error(f"Error checking changelog existence: Status: {response.status_code} {response.reason_phrase}")
+            logger.error(f"Error checking file existence on branch {branch}: Status: {response.status_code} {response.reason_phrase}")
             response.raise_for_status()
 
         # Prepare payload
-        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        if isinstance(content, bytes):
+            encoded_content = base64.b64encode(content).decode("utf-8")
+        else:
+            encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+            
         payload = {
             "message": commit_message,
-            "content": encoded_content
+            "content": encoded_content,
+            "branch": branch
         }
         if sha:
             payload["sha"] = sha
@@ -182,7 +244,7 @@ class GitHubService:
         # Push file content
         response = await self._request_with_backoff("PUT", url, json=payload)
         if response.status_code not in (200, 201):
-            logger.error(f"Failed to push changelog: Status: {response.status_code} {response.reason_phrase}")
+            logger.error(f"Failed to push content: Status: {response.status_code} {response.reason_phrase}")
             response.raise_for_status()
 
         data = response.json()
@@ -190,3 +252,4 @@ class GitHubService:
             "sha": data.get("commit", {}).get("sha", ""),
             "html_url": data.get("content", {}).get("html_url", "")
         }
+

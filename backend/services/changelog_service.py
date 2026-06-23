@@ -124,32 +124,31 @@ class ChangelogService:
 
     async def push_changelog(self, entry: ChangelogEntry, target_repo: str = None) -> Dict[str, Any]:
         """
-        Reads the existing changelog.txt from the repository (if it exists),
-        prepends the new entry, and pushes the updated file back to the separate repo.
+        Reads the existing changelog.txt from the changelog branch (if it exists),
+        prepends the new entry, and pushes the updated file back to the changelog branch of target_repo.
+        Also generates a workflow diagram using Workers AI and pushes the diagram and markdown summary.
         """
         target_repo = target_repo or settings.CHANGELOG_REPO
-        logger.info(f"Prepending entry for version {entry.version} and pushing to repository {target_repo}")
+        logger.info(f"Prepending entry for version {entry.version} and pushing to repository {target_repo} on branch changelog")
         
         path = "changelog.txt"
         commit_message = f"chore(release): release version {entry.version} (PR #{entry.pr_number})"
         
-        # 1. Fetch current content of changelog.txt to prepend
+        # 1. Fetch current content of changelog.txt to prepend (from the changelog branch)
         existing_content = ""
         try:
-            url = f"https://api.github.com/repos/{target_repo}/contents/{path}"
+            url = f"https://api.github.com/repos/{target_repo}/contents/{path}?ref=changelog"
             headers = {"Authorization": f"token {settings.GITHUB_TOKEN}"}
             
-            # Simple async request using httpx to read current file contents
             import httpx
             async with httpx.AsyncClient() as client:
                 res = await client.get(url, headers=headers)
                 if res.status_code == 200:
                     file_data = res.json()
                     raw_b64 = file_data.get("content", "")
-                    # GitHub contents are base64 encoded and might contain newlines
-                    existing_content = base64_decode_str = base64.b64decode(raw_b64.replace("\n", "")).decode("utf-8")
+                    existing_content = base64.b64decode(raw_b64.replace("\n", "")).decode("utf-8")
         except Exception as e:
-            logger.warning(f"Could not read existing changelog.txt (might be creating a new one): {e}")
+            logger.warning(f"Could not read existing changelog.txt from branch changelog: {e}")
 
         # 2. Format new entry
         new_entry_text = self._format_changelog_entry_text(entry)
@@ -157,10 +156,90 @@ class ChangelogService:
         # Prepend to existing content
         updated_content = new_entry_text + existing_content
         
-        # 3. Push back to GitHub
-        result = await self.github_service.push_changelog(path, updated_content, commit_message, target_repo)
-        
-        # 4. Save to database
+        # 3. Push back to GitHub (to changelog branch)
+        result = await self.github_service.push_changelog(
+            path,
+            updated_content,
+            commit_message,
+            target_repo,
+            branch="changelog"
+        )
+
+        # 4. Generate and push workflow diagram and individual summary markdown
+        wf_desc = "Software development process flow chart"
+        if entry.pr_number:
+            try:
+                analysis_row = await fetch_one("SELECT * FROM pr_analyses WHERE pr_number = ? LIMIT 1", (entry.pr_number,))
+                if analysis_row:
+                    wf_impact = json.loads(analysis_row["workflow_impact_json"])
+                    if wf_impact.get("has_impact") and wf_impact.get("impact_description"):
+                        wf_desc = wf_impact.get("impact_description")
+            except Exception as e:
+                logger.warning(f"Could not fetch workflow description from DB: {e}")
+
+        # Generate diagram using Cloudflare Worker AI Stable Diffusion XL
+        image_bytes = None
+        if settings.CLOUDFLARE_WORKER_URL:
+            try:
+                worker_image_url = f"{settings.CLOUDFLARE_WORKER_URL}/api/regenerate-workflow-image"
+                async with httpx.AsyncClient() as client:
+                    img_res = await client.post(
+                        worker_image_url,
+                        json={"workflow_text": wf_desc},
+                        timeout=40.0
+                    )
+                    if img_res.status_code == 200:
+                        image_bytes = img_res.content
+                        logger.info(f"Generated workflow diagram from Cloudflare Worker for PR #{entry.pr_number}")
+            except Exception as ex:
+                logger.error(f"Failed to generate workflow diagram from Cloudflare Worker: {ex}")
+
+        # Push diagram to changelog branch
+        if image_bytes:
+            try:
+                image_path = f"diagrams/pr_{entry.pr_number}.png"
+                image_commit = f"image(changelog): upload workflow diagram for PR #{entry.pr_number}"
+                await self.github_service.push_changelog(
+                    image_path,
+                    image_bytes,
+                    image_commit,
+                    target_repo,
+                    branch="changelog"
+                )
+            except Exception as e:
+                logger.error(f"Failed to push workflow diagram to changelog branch: {e}")
+
+        # Push summary markdown to changelog branch
+        try:
+            summary_md = f"# PR #{entry.pr_number} Summary\n\n"
+            summary_md += f"- **Version**: {entry.version}\n"
+            summary_md += f"- **Date**: {entry.date}\n"
+            summary_md += f"- **Lines Changed**: +{entry.lines_added} / -{entry.lines_deleted}\n\n"
+            summary_md += "## Technical Changes\n"
+            for tc in entry.technical_changes:
+                summary_md += f"- {tc}\n"
+            summary_md += "\n## Workflow Changes\n"
+            if entry.workflow_changes:
+                for wc in entry.workflow_changes:
+                    summary_md += f"- {wc}\n"
+            else:
+                summary_md += "- No workflow changes detected.\n"
+            if image_bytes:
+                summary_md += f"\n## Workflow Diagram\n![Workflow Diagram](../diagrams/pr_{entry.pr_number}.png)\n"
+
+            summary_path = f"summaries/pr_{entry.pr_number}.md"
+            summary_commit = f"docs(changelog): upload summary markdown for PR #{entry.pr_number}"
+            await self.github_service.push_changelog(
+                summary_path,
+                summary_md,
+                summary_commit,
+                target_repo,
+                branch="changelog"
+            )
+        except Exception as e:
+            logger.error(f"Failed to push summary markdown to changelog branch: {e}")
+
+        # 5. Save to database
         db_data = {
             "version": entry.version,
             "date": entry.date,
