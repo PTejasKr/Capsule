@@ -105,6 +105,8 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
         "repo":                 repo,
         "title":                summary.title,
         "summary":              summary.summary,
+        "branch":               pr_details.get("head_ref", "") or summary.branch,
+        "approved":             False,
         "changes_json":         json.dumps([c.model_dump() for c in summary.changes]),
         "workflow_impact_json": json.dumps(summary.workflow_impact.model_dump()),
         "confidence_score":     summary.confidence_score,

@@ -1,0 +1,79 @@
+name: Capsule Enterprise CI/CD Pipeline
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    branches:
+      - main
+
+jobs:
+  run-tests:
+    name: Run Python Tests & Code Audits
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run Unit & Integration Tests
+        env:
+          TESTING: "true"
+          DATABASE_URL: "sqlite+aiosqlite:///./data/test_capsule.db"
+        run: |
+          mkdir -p data
+          python -m pytest backend/tests/ -v
+
+  capsule-pipeline:
+    name: Capsule AI Requirements Analysis & Safety Gate
+    needs: run-tests
+    runs-on: ubuntu-latest
+    # Run if PR is opened/updated OR closed-merged
+    if: |
+      github.event.action != 'closed' || 
+      github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Trigger Capsule AI Requirements Check & Safety Audit
+      - name: Analyze PR Requirements Compliance
+        if: github.event.action != 'closed'
+        env:
+          CAPSULE_API_URL: ${{ secrets.CAPSULE_API_URL }}
+          CAPSULE_API_KEY: ${{ secrets.CAPSULE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python backend/scripts/cli_ci_helper.py \
+            --action analyze \
+            --repo "${{ github.repository }}" \
+            --pr ${{ github.event.pull_request.number }}
+
+      # Publish release changelogs and workflow diagrams upon PR merge to main
+      - name: Publish Release Changelog and Workflow Diagram
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        env:
+          CAPSULE_API_URL: ${{ secrets.CAPSULE_API_URL }}
+          CAPSULE_API_KEY: ${{ secrets.CAPSULE_API_KEY }}
+        run: |
+          python backend/scripts/cli_ci_helper.py \
+            --action merge \
+            --repo "${{ github.repository }}" \
+            --pr ${{ github.event.pull_request.number }}
