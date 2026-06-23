@@ -74,8 +74,8 @@ async def run_pr_analysis(
             "summary": summary.summary,
             "branch": branch_name or summary.branch,
             "approved": False,
-            "changes_json": json.dumps([c.model_dump() if hasattr(c, "model_dump") else c.dict() for c in summary.changes]),
-            "workflow_impact_json": json.dumps(summary.workflow_impact.model_dump() if hasattr(summary.workflow_impact, "model_dump") else summary.workflow_impact.dict()),
+            "changes_json": json.dumps([c.model_dump() for c in summary.changes]),
+            "workflow_impact_json": json.dumps(summary.workflow_impact.model_dump()),
             "confidence_score": summary.confidence_score,
         }
         record_id = await insert("pr_analyses", db_data)
@@ -85,7 +85,7 @@ async def run_pr_analysis(
         raise
 
     # Return the stored representation (including the generated id).
-    result = summary.model_dump() if hasattr(summary, "model_dump") else summary.dict()
+    result = summary.model_dump()
     result["id"] = record_id
     return result
 

@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
@@ -17,11 +18,26 @@ logging.basicConfig(
 
 logger = logging.getLogger("capsule.main")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up Capsule API Service...")
+    
+    # 1. Initialize SQLite Database Tables
+    await init_db()
+    
+    # 2. Pre-load/Initialize active BRD into memory
+    brd_manager = BRDManager()
+    await brd_manager.load_brd()
+    
+    logger.info("Capsule API Service successfully started and ready to handle requests.")
+    yield
+
 # Initialize FastAPI App
 app = FastAPI(
     title="Capsule — PR Analyzer API",
     description="Backend service for AI-powered PR analysis, workflow impact detection, and changelog generation.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Set up CORS middleware
@@ -39,19 +55,6 @@ app.add_middleware(
 app.include_router(webhooks.router)
 app.include_router(api.router)
 app.include_router(profiles.router)
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting up Capsule API Service...")
-    
-    # 1. Initialize SQLite Database Tables
-    await init_db()
-    
-    # 2. Pre-load/Initialize active BRD into memory
-    brd_manager = BRDManager()
-    await brd_manager.load_brd()
-    
-    logger.info("Capsule API Service successfully started and ready to handle requests.")
 
 @app.get("/")
 def read_root():
