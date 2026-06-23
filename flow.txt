@@ -1,71 +1,106 @@
-# Program Flow Overview
+# Program Flow & Architecture Overview
 
-This document describes the overall flow of the **Capsule** application after recent enhancements, including the new PR analysis helper and expanded pipeline capabilities.
+This document describes the overall architecture and step‑by‑step program flow of **Capsule** after the recent enterprise-grade upgrades. It details the interaction between GitHub, the CI/CD runners (GitHub Actions & Jenkins), the asynchronous Celery-Redis backend, the Cloudflare Worker edge, and the Chrome Extension dashboard.
 
 ---
 
-## High‑Level Workflow
+## 1. High-Level System Architecture
 
 ```mermaid
-flowchart TD
-    A[GitHub PR Event] -->|Webhook Trigger| B[backend/routers/webhooks.py]
-    B --> C[github_service.fetch_pr_title]
-    B --> D[github_service.fetch_pr_diff]
-    B --> E[github_service.fetch_pr_branch]
-    B --> F[brd_manager.get_latest_brd]
-    C & D & E & F --> G[backend/services/pr_analysis.run_pr_analysis]
-    G --> H[backend/services/ai_engine.AIEngine.analyze_pr]
-    H --> I[PRSummary (title, diff, branch, analysis, etc.)]
-    I --> J[backend/database.insert]
-    J --> K[Persisted PR summary in DB]
-    K --> L[Optional downstream actions (Jenkins pipeline, notifications, etc.)]
+flowchart TB
+    subgraph Client_Tier["Client & Extension Tier"]
+        Ext[Chrome Extension] -->|Injects UI| GithubPRPage[GitHub PR Page]
+        Ext -->|1. Request Summary / Approve / Preview| CF_Worker[Cloudflare Worker Edge]
+    end
+
+    subgraph CI_CD_Tier["CI/CD Orchestration Tier"]
+        GHA[GitHub Actions Runner] -->|Run pytest / Lint| GHA
+        GHA -->|2a. Trigger Analysis & Poll| CF_Worker
+        Jenkins[Jenkins CI/CD Server] -->|2b. Trigger Analysis & Poll| CF_Worker
+    end
+
+    subgraph Edge_Tier["Cloudflare Workers AI Gateway"]
+        CF_Worker -->|Route API Requests| Backend[FastAPI Backend Server]
+        CF_Worker -->|Generate Diagrams| CF_AI[Workers AI: Stable Diffusion XL]
+    end
+
+    subgraph Backend_Tier["Asynchronous Backend Core"]
+        Backend -->|3. Enqueue Tasks| Redis[(Redis Broker)]
+        Worker[Celery Task Worker] -->|4. Pull Task| Redis
+        Worker -->|5a. Fetch Title/Diff/Files| GitHub_API[GitHub REST API]
+        Worker -->|5b. Ground Rules| BRD_Mgr[BRD Manager & Cache]
+        Worker -->|5c. Analyze Code| NVIDIA_NIM[NVIDIA NIM Meta Llama 3.1 70B]
+        Worker -->|6. Save Analysis| SQLite_PG[(PostgreSQL / SQLite Database)]
+    end
+
+    subgraph Git_Storage_Tier["Git Repository Output"]
+        Worker -->|7a. Push changelog.txt| GitRepo_Changelog[(changelog Branch)]
+        Worker -->|7b. Push pr_{number}.png diagram| GitRepo_Changelog
+        Worker -->|7c. Push pr_{number}.md summary| GitRepo_Changelog
+    end
 ```
 
-### Step‑by‑Step Description
+---
 
-1. **GitHub PR Event** – A pull‑request event arrives via GitHub webhooks.
-2. **Webhook Router** – `backend/routers/webhooks.py` receives the payload and extracts the PR number.
-3. **Data Gathering** – Using the injected `github_service`:
-   - `fetch_pr_title(pr_number)`
-   - `fetch_pr_diff(pr_number)`
-   - `fetch_pr_branch(pr_number)` (new field).
-   - The `brd_manager` provides the latest Business Requirements Document.
-4. **PR Analysis Helper** – `backend/services/pr_analysis.run_pr_analysis` bundles the fetched data and calls the AI engine.
-5. **AI Engine** – `backend/services/ai_engine.AIEngine.analyze_pr` runs the LLM model, producing a `PRSummary` that now includes the **branch** name.
-6. **Persistence** – The summary is stored via `backend/database.insert`.
-7. **Post‑Processing** – The stored record can trigger further automation such as:
-   - Jenkins pipeline execution (already integrated elsewhere).
-   - Slack/Teams notifications.
-   - Dashboard updates.
+## 2. Step-by-Step Program Flow
+
+### Phase A: Pull Request Analysis (Trigger & Safety Gate)
+1. **Trigger**: A developer submits a Pull Request to `main`. This triggers either **GitHub Actions** (`capsule-ci.yml`) or **Jenkins** (`Jenkinsfile`).
+2. **Pre-Checks**: The CI/CD runner executes unit and integration tests (`pytest`).
+3. **Trigger Analysis**: The runner calls `cli_ci_helper.py --action analyze`, which posts a payload containing the PR number and repository to `/webhooks/jenkins` via the Capsule API.
+4. **Task Offloading**: In production, the FastAPI webhook endpoint immediately returns a `202 Accepted` status along with a `task_id` and offloads the analysis to the **Celery Worker** queue via **Redis**.
+5. **Polling**: The CI runner polls `/webhooks/task/{task_id}` every 5 seconds until it completes.
+6. **AI Analysis (Celery worker)**:
+   - Fetches PR details, files, and diffs from the GitHub REST API.
+   - Loads the active Business Requirements Document (BRD) via `BRDManager`.
+   - Runs a Map-Reduce analysis via the `AIEngine` (using Meta Llama 3.1 70B on NVIDIA NIM) to identify files altered, specific technical changes, and compliance against the BRD.
+   - Persists the analysis to the database (saving PR number, repo, branch, summary, changes JSON, workflow impact JSON, and setting `approved = False`).
+7. **Compliance and Gate Assessment**:
+   - If the AI detects **MAJOR** workflow changes (violating or altering core business flows), and the PR has **not** been approved yet, the polling script prints a critical warning and exits with code `1`.
+   - This **fails the CI build** and **blocks the PR from being merged**.
+   - If there are minor or no workflow changes, the CI check passes successfully (`exit 0`).
+8. **PR Comment Reporting**: The helper script uses the `GITHUB_TOKEN` to automatically post a markdown-formatted analysis summary directly onto the GitHub PR conversation page.
+
+### Phase B: Admin Review & Manual Approval
+1. **Notification**: The Chrome Extension detects the pull request page, queries the API, and receives the PR status.
+2. **Visual Alert**: The extension badge highlights red (for MAJOR workflow changes) or yellow (for MINOR changes) based on the severity of the impact.
+3. **Inspection**: The administrator opens the Chrome Extension popup, reviews the "PR Summary" and the generated "Workflow Diagram".
+4. **Approval**: If satisfied, the admin clicks Approve (or calls the `POST /api/pr/{pr_number}/approve` endpoint). This updates `approved = True` in the database.
+5. **CI Unblocking**: The admin re-runs the failed GitHub Actions job. The polling helper script queries the API, finds `approved = True`, and successfully passes the build, allowing the PR to be merged.
+
+### Phase C: PR Merge & Automated Release Delivery
+1. **Trigger**: The PR is merged into the `main` branch. This triggers the GitHub Actions workflow with the `closed` event.
+2. **Trigger Changelog**: The runner calls `cli_ci_helper.py --action merge`, which makes a request to `/api/pr/{pr_number}/generate-changelog`.
+3. **Changelog Generation (Celery worker)**:
+   - Fetches the saved PR analysis summary from the database.
+   - Determines the Semantic Version increment (MAJOR for major workflow changes, MINOR for minor changes, PATCH for purely technical fixes).
+   - Prepend the release notes to `changelog.txt` on the dedicated `changelog` branch.
+   - Triggers the Cloudflare Worker Edge AI (`stable-diffusion-xl`) to generate a schematic workflow diagram based on the PR's resolved program flow.
+   - Saves and pushes the generated workflow diagram to `diagrams/pr_{pr_number}.png` on the `changelog` branch.
+   - Pushes an individual markdown file `summaries/pr_{pr_number}.md` detailing the release changes and embedding the generated diagram.
 
 ---
 
-## New Additions
+## 3. Input & State Variations
 
-- **`branch` field** added to `PRSummary` schema (`backend/models/schemas.py`).
-- **`run_pr_analysis`** helper module (`backend/services/pr_analysis.py`) that orchestrates data collection and AI analysis.
-- Updated **AIEngine** signature to accept `branch_name: Optional[str]` and return it in the summary.
-
----
-
-## Input Variations
-
-| Input Type | Source | Impact on Flow |
-|------------|--------|----------------|
-| PR Title   | GitHub | Used for context in LLM prompt. |
-| PR Diff    | GitHub | Core content for analysis. |
-| Branch Name| GitHub (new) | Included in `PRSummary.branch`. |
-| BRD        | Local BRD manager | Provides business context for LLM. |
-| Model Override | `model` param | Allows selecting a different LLM model for analysis. |
+| Input Scenario | Flow Trigger | Analysis Output | Gating Action | Changelog Action |
+| :--- | :--- | :--- | :--- | :--- |
+| **Pure Refactoring / Bugfix**<br>(No BRD impact) | PR Open / Update | Severity: `NONE`<br>Confidence: High | **Passes Instantly**<br>(Checks green, exit 0) | Version: `+0.0.1` (PATCH)<br>Pushed on merge. |
+| **New Optional Feature**<br>(Minor BRD impact) | PR Open / Update | Severity: `MINOR`<br>Confidence: High | **Passes Instantly**<br>(Yellow badge alert, exit 0) | Version: `+0.1.0` (MINOR)<br>Pushed on merge. |
+| **Workflow Modification**<br>(Major BRD impact, unapproved) | PR Open / Update | Severity: `MAJOR`<br>Confidence: High | **BLOCKED**<br>(Fails build, exit 1, Red badge) | **None**<br>(Merge blocked by GitHub checks) |
+| **Workflow Modification**<br>(Major BRD impact, approved) | GHA Re-run after Admin Approval | Severity: `MAJOR`<br>Approved: `True` | **Passes**<br>(Checks green, exit 0) | Version: `+1.0.0` (MAJOR)<br>Pushes changelog & diagram. |
 
 ---
 
-## Diagram Legend
+## 4. Component Definitions
 
-- **Rectangles** – Code modules / services.
-- **Arrows** – Data flow between components.
-- **Dashed arrows** – Optional downstream processes.
+- **FastAPI Web App (`backend/`)**: Exposes REST interfaces for GitHub/Jenkins webhook ingestion, task polling, admin approval, weekly consolidated changes, and BRD version uploads.
+- **Celery & Redis (`backend/tasks.py`)**: Distributed task queue handling heavy prompt compilation, NVIDIA NIM LLM inference, GitHub commits/files processing, and git push operations.
+- **Cloudflare Worker Edge (`cloudflare-worker/`)**: Exposes a proxy gateway for the extension. Uses Workers AI (`stable-diffusion-xl`) for generating workflow diagrams at the edge, bypassing backend server load.
+- **Chrome Extension (`extension/`)**: Injects a dashboard widget into the PR page. Displays tabs for:
+  - **PR Summary**: File-by-file changes and compliance warnings.
+  - **Weekly Changes**: Consolidates approved changes made in the past 1 week.
+  - **Workflow Diagram**: Visual system flowchart generated by Workers AI.
 
 ---
-
-*Generated on 2026‑06‑22.*
+*Last updated: June 23, 2026.*
