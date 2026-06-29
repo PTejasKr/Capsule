@@ -67,20 +67,17 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
 
     if row:
         profile = {
+            "id": row["id"],
             "changelog_repo": row["changelog_repo"],
             "ai_model": row["ai_model"],
             "brd_content": row["brd_content"],
         }
     else:
-        profile = {
-            "changelog_repo": settings.CHANGELOG_REPO,
-            "ai_model": settings.NVIDIA_NIM_MODEL,
-            "brd_content": None,
-        }
+        raise ValueError(f"Repository {repo} is not mapped to any profile. Cannot proceed.")
 
-    brd = profile["brd_content"] or await brd_manager.load_brd()
+    brd = profile["brd_content"] or await brd_manager.load_brd(profile["id"])
     if not brd:
-        raise ValueError("BRD missing. Upload a BRD before triggering analysis.")
+        raise ValueError(f"BRD missing for profile {profile['id']}. Upload a BRD before triggering analysis.")
 
     # --- fetch from GitHub ---
     pr_details = await github_service.get_pr_details(repo, pr_number)

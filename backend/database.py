@@ -62,17 +62,6 @@ async def init_db():
         logger.info("Initializing PostgreSQL database...")
         pool = await get_pg_pool()
         async with pool.acquire() as conn:
-            # Create brd_versions
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS brd_versions (
-                    id SERIAL PRIMARY KEY,
-                    content TEXT NOT NULL,
-                    version TEXT NOT NULL,
-                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    hash TEXT NOT NULL UNIQUE
-                )
-            """)
-
             # Create profiles
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS profiles (
@@ -81,7 +70,20 @@ async def init_db():
                     changelog_repo TEXT NOT NULL,
                     ai_model TEXT NOT NULL,
                     brd_content TEXT,
+                    github_token TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Create brd_versions
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS brd_versions (
+                    id SERIAL PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    hash TEXT NOT NULL UNIQUE,
+                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
                 )
             """)
 
@@ -145,17 +147,6 @@ async def init_db():
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
             
-            # Create brd_versions
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS brd_versions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    version TEXT NOT NULL,
-                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    hash TEXT NOT NULL UNIQUE
-                )
-            """)
-
             # Create profiles
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS profiles (
@@ -164,7 +155,21 @@ async def init_db():
                     changelog_repo TEXT NOT NULL,
                     ai_model TEXT NOT NULL,
                     brd_content TEXT,
+                    github_token TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Create brd_versions
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS brd_versions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    content TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    hash TEXT NOT NULL UNIQUE,
+                    profile_id INTEGER NOT NULL,
+                    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 )
             """)
 

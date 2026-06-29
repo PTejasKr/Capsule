@@ -64,6 +64,7 @@ class ProfileCreate(BaseModel):
     changelog_repo: str = Field(..., description="GitHub repository (owner/repo) to push changelogs to")
     ai_model: str = Field("meta/llama-3.1-70b-instruct", description="NVIDIA NIM model name")
     brd_content: Optional[str] = Field(None, description="Optional BRD content specific to this profile")
+    github_token: Optional[str] = Field(None, description="GitHub token for 1-click deployment")
 
 class ProfileResponse(ProfileCreate):
     id: int
@@ -71,6 +72,11 @@ class ProfileResponse(ProfileCreate):
 class RepositoryMappingCreate(BaseModel):
     source_repo: str = Field(..., description="The repository triggering the webhook (owner/repo)")
     profile_id: int = Field(..., description="The ID of the profile to use")
+
+class WebhookDeployRequest(BaseModel):
+    source_repo: str = Field(..., description="The repository to deploy to (owner/repo)")
+    profile_id: int = Field(..., description="The ID of the profile to use")
+    webhook_url: str = Field(..., description="The publicly accessible webhook URL")
 
 class BRDUploadResponse(BaseModel):
     status: str

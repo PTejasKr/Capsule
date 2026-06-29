@@ -54,12 +54,20 @@
         <button id="btn-retry" class="btn btn-primary">Retry Connection</button>
       </div>
 
-      <!-- Loading skeleton -->
-      <div id="state-loading" class="state-card">
-        <div class="skeleton-title"></div>
-        <div class="skeleton-text"></div>
-        <div class="skeleton-text"></div>
-        <div class="skeleton-card"></div>
+      <!-- DotmSquare7 Loader -->
+      <div id="state-loading" class="state-card loading-state">
+        <div class="dotm-square-7 bloom-glow">
+          <div class="dot-grid">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+        <p class="loading-message">Analyzing repository patterns...</p>
       </div>
 
       <!-- Main Dashboard view -->
@@ -137,9 +145,18 @@
         <div id="panel-weekly" class="tab-panel hidden">
           <div class="content-card">
             <h3>Weekly Summary (Last 7 Days)</h3>
-            <div id="weekly-loading" class="state-card" style="margin-top: 10px;">
-              <div class="skeleton-text"></div>
-              <div class="skeleton-text"></div>
+            <div id="weekly-loading" class="state-card loading-state" style="margin-top: 10px;">
+              <div class="dotm-square-7 pattern-cross">
+                <div class="dot-grid mini">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+              </div>
             </div>
             <div id="weekly-empty" class="state-card hidden">
               <p>No changes analyzed in the past 7 days.</p>
@@ -162,9 +179,19 @@
             </div>
             <button id="btn-generate-wf" class="btn btn-primary">Generate Workflow Image</button>
             
-            <div id="wf-image-loading" class="state-card hidden" style="margin-top: 16px;">
-              <div class="skeleton-card"></div>
-              <p style="margin-top: 8px;">Generating workflow diagram via Cloudflare Workers AI...</p>
+            <div id="wf-image-loading" class="state-card loading-state hidden" style="margin-top: 16px;">
+              <div class="dotm-square-7 bloom-glow">
+                <div class="dot-grid mini">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+              </div>
+              <p style="margin-top: 8px;">Generating diagram...</p>
             </div>
             
             <div id="wf-image-container" class="image-preview-container hidden">

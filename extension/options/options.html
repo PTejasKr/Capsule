@@ -5,38 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Capsule Extension Settings</title>
   <style>
+    :root {
+      --onyx: #121418;
+      --glass-bg: rgba(30, 32, 36, 0.6);
+      --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+      --glass-blur: blur(16px);
+      --orange: #f97316;
+      --orange-hover: #ea580c;
+      --text-main: #c9d1d9;
+    }
+    
     body {
-      background-color: #0d1117;
-      color: #c9d1d9;
+      background-color: var(--onyx);
+      background-image: radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.05), transparent 40%);
+      color: var(--text-main);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      padding: 40px;
+      padding: 20px;
+      margin: 0;
       display: flex;
       justify-content: center;
-      margin: 0;
+      min-height: 100vh;
     }
     
     .settings-container {
-      width: 480px;
-      background-color: #161b22;
-      border: 1px solid #30363d;
+      width: 800px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
+      backdrop-filter: var(--glass-blur);
+      border: var(--glass-border);
       border-radius: 12px;
-      padding: 32px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     
     .logo-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid #30363d;
-      padding-bottom: 16px;
+      padding: 24px 32px;
+      border-bottom: var(--glass-border);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
     }
     
     .logo-icon {
       width: 24px;
       height: 24px;
-      color: #58a6ff;
+      color: var(--orange);
     }
     
     .logo-text {
@@ -44,12 +60,61 @@
       font-weight: 700;
       color: #f0f6fc;
     }
+
+    .tabs {
+      display: flex;
+      background-color: rgba(0, 0, 0, 0.1);
+      border-bottom: var(--glass-border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 14px;
+      background: none;
+      border: none;
+      color: #8b949e;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+      color: #c9d1d9;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: var(--orange);
+      border-bottom-color: var(--orange);
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 32px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
     
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-top: 0;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #30363d;
+    }
+
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
     
     label {
@@ -58,22 +123,29 @@
       color: #f0f6fc;
     }
     
-    input[type="text"], input[type="password"] {
-      background-color: #0d1117;
-      border: 1px solid #30363d;
+    input[type="text"], input[type="password"], select, textarea {
+      background-color: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 6px;
       padding: 8px 12px;
       color: #c9d1d9;
-      font-size: 14px;
+      font-size: 13px;
+      font-family: inherit;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.3s ease;
     }
     
-    input[type="text"]:focus, input[type="password"]:focus {
-      border-color: #58a6ff;
-      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+      background-color: rgba(0, 0, 0, 0.5);
     }
     
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
     .help-text {
       font-size: 11px;
       color: #8b949e;
@@ -82,12 +154,12 @@
     .btn-row {
       display: flex;
       gap: 12px;
-      margin-top: 32px;
+      margin-top: 24px;
     }
     
     .btn {
       border: none;
-      padding: 10px 20px;
+      padding: 8px 16px;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
@@ -99,28 +171,29 @@
     }
     
     .btn-primary {
-      background-color: #238636;
+      background-color: var(--orange);
       color: #ffffff;
     }
     
     .btn-primary:hover {
-      background-color: #2ea043;
+      background-color: var(--orange-hover);
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
     }
     
     .btn-secondary {
-      background-color: #21262d;
-      border: 1px solid #30363d;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: #c9d1d9;
     }
     
     .btn-secondary:hover {
-      background-color: #30363d;
+      background-color: rgba(255, 255, 255, 0.1);
       color: #f0f6fc;
     }
     
     .status-message {
-      margin-top: 20px;
-      padding: 12px;
+      margin-top: 16px;
+      padding: 10px 12px;
       border-radius: 6px;
       font-size: 13px;
       display: none;
@@ -137,6 +210,20 @@
       border: 1px solid #f85149;
       color: #ff7b72;
     }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .panel {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border: var(--glass-border);
+      border-radius: 8px;
+      padding: 16px;
+      backdrop-filter: blur(8px);
+    }
   </style>
 </head>
 <body>
@@ -147,27 +234,142 @@
         <path d="M12 8v8"/>
         <path d="M8 12h8"/>
       </svg>
-      <span class="logo-text">Capsule Configuration</span>
+      <span class="logo-text">Capsule Admin Dashboard</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-connection">Connection</button>
+      <button class="tab-btn" data-tab="tab-profiles">Profiles & Teams</button>
+      <button class="tab-btn" data-tab="tab-brd">BRD Manager</button>
     </div>
     
-    <div class="form-group">
-      <label for="input-api-url">Backend Server URL</label>
-      <input type="text" id="input-api-url" placeholder="http://localhost:8000">
-      <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
+    <!-- TAB 1: CONNECTION -->
+    <div id="tab-connection" class="tab-content active">
+      <h3 class="section-title">Backend Connection</h3>
+      <div class="form-group">
+        <label for="input-api-url">Backend Server URL</label>
+        <input type="text" id="input-api-url" placeholder="http://localhost:8000">
+        <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
+      </div>
+      
+      <div class="form-group">
+        <label for="input-api-key">X-API-Key</label>
+        <input type="password" id="input-api-key" placeholder="Enter API Key">
+        <span class="help-text">API Key generated on the backend to authenticate the extension requests.</span>
+      </div>
+      
+      <div class="btn-row">
+        <button id="btn-save-conn" class="btn btn-primary">Save Settings</button>
+        <button id="btn-test-conn" class="btn btn-secondary">Test Connection</button>
+      </div>
+      <div id="status-conn" class="status-message"></div>
     </div>
-    
-    <div class="form-group">
-      <label for="input-api-key">X-API-Key</label>
-      <input type="password" id="input-api-key" placeholder="Enter API Key">
-      <span class="help-text">API Key generated on the backend to authenticate the extension requests.</span>
+
+    <!-- TAB 2: PROFILES & TEAMS -->
+    <div id="tab-profiles" class="tab-content">
+      <div class="grid-container">
+        
+        <!-- Create Profile -->
+        <div class="panel">
+          <h3 class="section-title">Create Profile</h3>
+          <div class="form-group">
+            <label>Profile Name</label>
+            <input type="text" id="prof-name" placeholder="e.g. Frontend Team">
+          </div>
+          <div class="form-group">
+            <label>Changelog Repo</label>
+            <input type="text" id="prof-changelog" placeholder="owner/repo">
+          </div>
+          <div class="form-group">
+            <label>AI Model</label>
+            <input type="text" id="prof-model" value="meta/llama-3.1-70b-instruct">
+          </div>
+          <div class="form-group">
+            <label>GitHub Token (For Webhooks)</label>
+            <input type="password" id="prof-token" placeholder="ghp_...">
+          </div>
+          <button id="btn-create-prof" class="btn btn-primary">Create Profile</button>
+          <div id="status-create-prof" class="status-message"></div>
+        </div>
+
+        <!-- Mappings & Webhooks -->
+        <div>
+          <div class="panel" style="margin-bottom: 24px;">
+            <h3 class="section-title">Map Repository</h3>
+            <div class="form-group">
+              <label>Select Profile</label>
+              <select id="map-prof-select" class="profile-dropdown">
+                <option value="">Load profiles first...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Source Repo</label>
+              <input type="text" id="map-repo" placeholder="owner/repo">
+            </div>
+            <button id="btn-map-repo" class="btn btn-primary">Map Repository</button>
+            <div id="status-map" class="status-message"></div>
+          </div>
+
+          <div class="panel">
+            <h3 class="section-title">Deploy Webhook (1-Click)</h3>
+            <div class="form-group">
+              <label>Select Profile</label>
+              <select id="deploy-prof-select" class="profile-dropdown">
+                <option value="">Load profiles first...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Target Repo</label>
+              <input type="text" id="deploy-repo" placeholder="owner/repo">
+            </div>
+            <div class="form-group">
+              <label>Webhook Payload URL</label>
+              <input type="text" id="deploy-url" placeholder="https://your-server.com/api/webhooks/github?profile_id=1">
+            </div>
+            <button id="btn-deploy-webhook" class="btn btn-primary">Deploy Webhook</button>
+            <div id="status-deploy" class="status-message"></div>
+          </div>
+        </div>
+
+      </div>
     </div>
-    
-    <div class="btn-row">
-      <button id="btn-save" class="btn btn-primary">Save Settings</button>
-      <button id="btn-test" class="btn btn-secondary">Test Connection</button>
+
+    <!-- TAB 3: BRD MANAGER -->
+    <div id="tab-brd" class="tab-content">
+      <h3 class="section-title">Manage BRDs (Business Requirement Documents)</h3>
+      
+      <div class="form-group" style="width: 50%;">
+        <label>Select Profile</label>
+        <select id="brd-prof-select" class="profile-dropdown">
+          <option value="">Load profiles first...</option>
+        </select>
+      </div>
+
+      <div class="grid-container" style="margin-top: 24px;">
+        <div class="panel">
+          <h3 class="section-title">Upload New BRD</h3>
+          <div class="form-group">
+            <label>BRD Content (Markdown)</label>
+            <textarea id="brd-content" rows="10" placeholder="# PRD\n\n## Architecture..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Version (Optional)</label>
+            <input type="text" id="brd-version" placeholder="v1.0.0">
+          </div>
+          <button id="btn-upload-brd" class="btn btn-primary">Upload BRD</button>
+          <div id="status-brd" class="status-message"></div>
+        </div>
+
+        <div class="panel">
+          <h3 class="section-title">Current Active BRD</h3>
+          <div id="current-brd-info" style="font-size: 13px; color: #8b949e;">
+            Select a profile to view active BRD.
+          </div>
+          <button id="btn-refresh-brd" class="btn btn-secondary" style="margin-top: 16px;">Refresh Status</button>
+        </div>
+      </div>
     </div>
-    
-    <div id="status-box" class="status-message"></div>
+
   </div>
   <script src="options.js"></script>
 </body>
