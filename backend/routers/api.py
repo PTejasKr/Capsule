@@ -186,9 +186,12 @@ async def generate_and_push_changelog(pr_number: int, repo: Optional[str] = None
 @router.post("/pr/{pr_number}/approve", dependencies=[Depends(verify_api_key)])
 async def approve_pr(pr_number: int, repo: str):
     """
-    Approves a feature branch analysis, making it visible to the extension.
+    Approves a feature branch analysis, making it visible to the extension,
+    and automatically generates and pushes the changelog.
     """
     from backend.database import execute_query
+    
+    # 1. Mark as approved in DB
     sql = "UPDATE pr_analyses SET approved = ? WHERE pr_number = ? AND repo = ?"
     updated = await execute_query(sql, (True, pr_number, repo))
     if not updated:
@@ -196,7 +199,117 @@ async def approve_pr(pr_number: int, repo: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"PR #{pr_number} in {repo} not found to approve."
         )
-    return {"status": "success", "message": f"PR #{pr_number} in {repo} approved."}
+        
+    # 2. Trigger changelog generation and push
+    try:
+        changelog_result = await generate_and_push_changelog(pr_number, repo)
+        return {
+            "status": "success", 
+            "message": f"PR #{pr_number} in {repo} approved and changelog pushed.",
+            "changelog": changelog_result
+        }
+    except Exception as e:
+        logger.error(f"PR approved but failed to push changelog: {e}")
+        return {
+            "status": "partial_success",
+            "message": f"PR #{pr_number} approved, but changelog generation failed: {str(e)}"
+        }
+
+from pydantic import BaseModel
+class RepairSummaryRequest(BaseModel):
+    edited_summary: str
+
+@router.post("/pr/{pr_number}/repair", dependencies=[Depends(verify_api_key)])
+async def repair_pr_summary(pr_number: int, repo: str, request: RepairSummaryRequest):
+    """
+    Allows the Admin to repair or edit the generated summary before approval.
+    """
+    from backend.database import execute_query
+    sql = "UPDATE pr_analyses SET summary = ?, approved = ? WHERE pr_number = ? AND repo = ?"
+    updated = await execute_query(sql, (request.edited_summary, False, pr_number, repo))
+    if not updated:
+        raise HTTPException(status_code=404, detail="PR analysis not found.")
+    return {"status": "success", "message": "Summary updated."}
+
+@router.get("/pr/{pr_number}/compare", dependencies=[Depends(verify_api_key)])
+async def compare_pr_summaries(pr_number: int, repo: str):
+    """
+    Uses OpenRouter to compare the original AI summary with the currently edited summary.
+    """
+    sql = "SELECT original_summary, summary FROM pr_analyses WHERE pr_number = ? AND repo = ?"
+    row = await fetch_one(sql, (pr_number, repo))
+    if not row:
+        raise HTTPException(status_code=404, detail="PR analysis not found.")
+        
+    original = row.get("original_summary")
+    current = row.get("summary")
+    
+    if original == current or not original:
+        return {"differences_detected": False, "message": "No edits made to the summary."}
+        
+    comparison = await ai_engine.compare_summaries(original, current)
+    return comparison
+
+@router.get("/pr/pending", dependencies=[Depends(verify_api_key)], response_model=List[PRSummary])
+async def get_pending_prs():
+    """
+    Retrieves all unapproved PRs across all repositories.
+    """
+    from backend.database import fetch_all
+    sql = "SELECT * FROM pr_analyses WHERE approved = ?"
+    rows = await fetch_all(sql, (False,))
+    
+    summaries = []
+    for r in rows:
+        try:
+            summary = await _reconstruct_summary_from_row(r)
+            summaries.append(summary)
+        except Exception as e:
+            logger.error(f"Error reconstructing PR summary: {e}")
+            continue
+            
+    return summaries
+
+@router.post("/pr/{pr_number}/reject", dependencies=[Depends(verify_api_key)])
+async def reject_pr(pr_number: int, repo: str):
+    """
+    Rejects a PR by removing it from the database so it no longer appears in the pending queue.
+    """
+    from backend.database import execute_query
+    sql = "DELETE FROM pr_analyses WHERE pr_number = ? AND repo = ?"
+    deleted = await execute_query(sql, (pr_number, repo))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="PR analysis not found.")
+    return {"status": "success", "message": "PR rejected and removed from pending queue."}
+
+@router.post("/pr/{pr_number}/auto-repair", dependencies=[Depends(verify_api_key)])
+async def auto_repair_pr(pr_number: int, repo: str):
+    """
+    Uses the Multi-LLM architecture to automatically generate and apply code fixes for a PR.
+    """
+    sql = "SELECT original_summary, summary, branch FROM pr_analyses WHERE pr_number = ? AND repo = ?"
+    row = await fetch_one(sql, (pr_number, repo))
+    if not row:
+        raise HTTPException(status_code=404, detail="PR analysis not found.")
+        
+    branch = row.get("branch")
+    if not branch or branch == "main":
+        raise HTTPException(status_code=400, detail="Cannot auto-repair the main branch or unknown branch.")
+        
+    # 1. Fetch current files changed in the PR
+    files_metadata = await github_service.get_pr_files(repo, pr_number)
+    
+    # 2. Use AI Engine to generate patch
+    patch_result = await ai_engine.auto_repair_code(row.get("summary"), files_metadata)
+    
+    # 3. Apply patch via GitHub API
+    commit_result = await github_service.commit_repair_patch(repo, branch, patch_result)
+    
+    return {
+        "status": "success", 
+        "message": f"Auto-repair completed and pushed to {branch}.",
+        "details": commit_result
+    }
 
 @router.get("/changes/weekly", dependencies=[Depends(verify_api_key)], response_model=List[PRSummary])
 async def get_weekly_changes():

@@ -33,6 +33,7 @@
 
     <!-- Tabs Navigation -->
     <div class="tabs-nav">
+      <button class="tab-button" id="tab-dashboard">Dashboard</button>
       <button class="tab-button active" id="tab-pr">Current PR</button>
       <button class="tab-button" id="tab-weekly">Weekly Changes</button>
       <button class="tab-button" id="tab-workflow">Workflow Diagram</button>
@@ -72,6 +73,24 @@
 
       <!-- Main Dashboard view -->
       <div id="dashboard-content" class="hidden">
+        
+        <!-- Tab Panel: Multi-Repo Dashboard -->
+        <div id="panel-dashboard" class="tab-panel hidden">
+          <div class="repo-tabs-container">
+             <div id="repo-tabs" class="repo-tabs"></div>
+          </div>
+          <div id="repo-prs-container" class="repo-prs-container">
+             <!-- Stacked cards of PRs for selected repo -->
+          </div>
+          
+          <div id="dashboard-loading" class="state-card loading-state hidden">
+            <p>Loading pending PRs...</p>
+          </div>
+          <div id="dashboard-empty" class="state-card hidden">
+            <p>No pending PRs across any repository!</p>
+          </div>
+        </div>
+
         <!-- Tab Panel: Current PR Summary -->
         <div id="panel-pr" class="tab-panel">
         <!-- PR Info Badge -->
@@ -137,6 +156,22 @@
               </button>
             </div>
           </div>
+        </div>
+        
+        <!-- Admin Tools: Repair, Compare, Approve -->
+        <div class="content-card admin-tools-card" style="margin-top: 15px; border: 1px solid var(--accent-blue);">
+          <h3 style="color: var(--accent-blue); margin-bottom: 10px;">Admin Actions</h3>
+          <p class="description" style="margin-bottom: 10px;">Edit the summary below and compare before final approval.</p>
+          <textarea id="admin-summary-edit" class="input-field" rows="4" style="width: 100%; box-sizing: border-box; margin-bottom: 10px; background: var(--bg-primary); color: var(--text-primary); padding: 8px; border-radius: 4px;"></textarea>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button id="btn-repair" class="btn btn-secondary" style="flex: 1;">Save Edit</button>
+            <button id="btn-compare" class="btn btn-secondary" style="flex: 1;">Compare</button>
+          </div>
+          
+          <div id="compare-results" class="hidden" style="margin-bottom: 10px; padding: 10px; background: var(--bg-primary); border-radius: 4px; font-size: 12px;"></div>
+          
+          <button id="btn-approve" class="btn btn-primary" style="width: 100%; background: #238636;">Approve & Push Changelog</button>
         </div>
 
         </div> <!-- End of panel-pr -->

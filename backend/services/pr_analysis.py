@@ -72,6 +72,7 @@ async def run_pr_analysis(
             "repo": repo,
             "title": summary.title,
             "summary": summary.summary,
+            "original_summary": summary.summary,
             "branch": branch_name or summary.branch,
             "approved": False,
             "changes_json": json.dumps([c.model_dump() for c in summary.changes]),

@@ -6,19 +6,20 @@
   <title>Capsule Extension Settings</title>
   <style>
     :root {
-      --onyx: #121418;
-      --glass-bg: rgba(30, 32, 36, 0.6);
-      --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-      --glass-blur: blur(16px);
-      --orange: #f97316;
-      --orange-hover: #ea580c;
-      --text-main: #c9d1d9;
+      --ivory: #FFFFF0;
+      --bg-main: var(--ivory);
+      --bg-card: #ffffff;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --text-main: #1a1a1a;
+      --text-muted: #555555;
+      
+      --orange: #d95f02;
+      --orange-hover: #a64500;
+      --light-orange: #ffd8be;
     }
     
     body {
-      background-color: var(--onyx);
-      background-image: radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 40%),
-                        radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.05), transparent 40%);
+      background-color: var(--bg-main);
       color: var(--text-main);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       padding: 20px;
@@ -30,11 +31,10 @@
     
     .settings-container {
       width: 800px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
-      backdrop-filter: var(--glass-blur);
-      border: var(--glass-border);
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -45,8 +45,8 @@
       align-items: center;
       gap: 10px;
       padding: 24px 32px;
-      border-bottom: var(--glass-border);
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--light-orange);
     }
     
     .logo-icon {
@@ -58,13 +58,13 @@
     .logo-text {
       font-size: 20px;
       font-weight: 700;
-      color: #f0f6fc;
+      color: #1a1a1a;
     }
 
     .tabs {
       display: flex;
-      background-color: rgba(0, 0, 0, 0.1);
-      border-bottom: var(--glass-border);
+      background-color: #f7f6f0;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .tab-btn {
@@ -72,23 +72,23 @@
       padding: 14px;
       background: none;
       border: none;
-      color: #8b949e;
+      color: var(--text-muted);
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
       border-bottom: 2px solid transparent;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
     }
 
     .tab-btn:hover {
-      color: #c9d1d9;
-      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      background-color: rgba(0, 0, 0, 0.02);
     }
 
     .tab-btn.active {
       color: var(--orange);
       border-bottom-color: var(--orange);
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: #ffffff;
     }
 
     .tab-content {
@@ -103,11 +103,11 @@
     .section-title {
       font-size: 16px;
       font-weight: 600;
-      color: #f0f6fc;
+      color: var(--text-main);
       margin-top: 0;
       margin-bottom: 16px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #30363d;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .form-group {
@@ -120,25 +120,25 @@
     label {
       font-size: 13px;
       font-weight: 600;
-      color: #f0f6fc;
+      color: var(--text-main);
     }
     
     input[type="text"], input[type="password"], select, textarea {
-      background-color: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background-color: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.15);
       border-radius: 6px;
       padding: 8px 12px;
-      color: #c9d1d9;
+      color: var(--text-main);
       font-size: 13px;
       font-family: inherit;
       outline: none;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
     }
     
     input:focus, select:focus, textarea:focus {
       border-color: var(--orange);
-      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
-      background-color: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 0 3px rgba(217, 95, 2, 0.15);
+      background-color: #ffffff;
     }
     
     textarea {
@@ -148,7 +148,7 @@
 
     .help-text {
       font-size: 11px;
-      color: #8b949e;
+      color: var(--text-muted);
     }
     
     .btn-row {
@@ -177,18 +177,18 @@
     
     .btn-primary:hover {
       background-color: var(--orange-hover);
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+      box-shadow: 0 4px 12px rgba(217, 95, 2, 0.2);
     }
     
     .btn-secondary {
-      background-color: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #c9d1d9;
+      background-color: #f7f6f0;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: var(--text-main);
     }
     
     .btn-secondary:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: #f0f6fc;
+      background-color: #eeebe0;
+      color: #000000;
     }
     
     .status-message {
@@ -200,15 +200,15 @@
     }
     
     .status-success {
-      background-color: rgba(63, 185, 80, 0.1);
-      border: 1px solid #2ea043;
-      color: #56d364;
+      background-color: rgba(26, 127, 55, 0.08);
+      border: 1px solid #1a7f37;
+      color: #1a7f37;
     }
     
     .status-error {
-      background-color: rgba(248, 81, 73, 0.1);
-      border: 1px solid #f85149;
-      color: #ff7b72;
+      background-color: rgba(207, 34, 46, 0.08);
+      border: 1px solid #cf222e;
+      color: #cf222e;
     }
 
     .grid-container {
@@ -218,11 +218,10 @@
     }
 
     .panel {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
-      border: var(--glass-border);
+      background-color: #fcfbfa;
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 16px;
-      backdrop-filter: blur(8px);
     }
   </style>
 </head>

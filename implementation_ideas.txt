@@ -1,7 +1,7 @@
 ================================================================================
   CAPSULE — AI-Powered PR Analysis & Release System
   Implementation Ideas & Project Specification
-  Date: 2026-06-17
+  Date: 2026-06-30
 ================================================================================
 
 PROJECT OVERVIEW
@@ -36,10 +36,10 @@ CORE REQUIREMENTS (From Manager)
 
 TECH STACK DECISIONS
 ====================
-- AI Model:      NVIDIA NIM + Meta Llama 3.1 70B Instruct
+- AI Model:      NVIDIA NIM, Google Gemini, Groq, OpenRouter, local Ollama (Configurable via env vars)
 - Guardrails:    NVIDIA NeMo Guardrails (input/output safety rails)
 - Backend:       Python 3.12+ (FastAPI)
-- Database:      SQLite (lightweight, no external DB dependency)
+- Database:      SQLite / PostgreSQL + AsyncPG (Flexible persistence options)
 - Extension:     Chrome Extension (Manifest V3)
 - CI/CD:         Jenkins (Generic Webhook Trigger Plugin)
 - GitHub API:    PyGithub library + REST API
@@ -109,10 +109,16 @@ Key endpoints:
   GET  /api/pr/{num}/changelog-preview - Preview changelog entry
   POST /api/brd/upload            - Upload/update BRD document
   GET  /api/health                - Health check
+  POST /api/pr/{num}/approve      - Mark PR as approved and push release changelogs
+  POST /api/pr/{num}/repair       - Allows admin to edit the generated PR summary
+  GET  /api/pr/{num}/compare      - Perform AI difference analysis between original/edited summaries
+  GET  /api/pr/pending            - Retrieves unapproved/pending PRs across repositories
+  POST /api/pr/{num}/reject       - Rejects and removes a PR from the pending queue
+  POST /api/pr/{num}/auto-repair  - Triggers the Kilo Code multi-agent auto-repair loop
 
 Database tables (SQLite):
   - brd_versions      : Version history of BRD documents
-  - pr_analyses       : Cached PR analysis results
+  - pr_analyses       : Cached PR analysis results (contains both `original_summary` and `summary`)
   - changelog_entries : All generated changelog entries
   - audit_log         : Every AI call logged with input/output
 
@@ -179,6 +185,14 @@ Anti-Hallucination Architecture (8 Layers):
     - Every AI call logged with timestamp, input hash, output, scores
     - Full traceability for debugging and accountability
 
+MULTI-AGENT AUTO-REPAIR LOOP (KILO CODE ARCHITECTURE)
+=====================================================
+- **Architect Mode**: Plans code modifications based on the PR changes and requirements.
+- **Coder Mode**: Writes the concrete code fixes requested by the Architect's plan.
+- **Debugger Mode**: Statically verifies the Coder's generated code against syntax rules and functional intent.
+- **Self-Healing Engine**: Supports up to 2 verification recovery cycles on errors, providing robust, self-healing branch fixes.
+- **GitHub Commit Push**: Automatically pushes valid patches back to the PR branch via GitHub API.
+
 NeMo Guardrails config (config/guardrails.yaml):
   models:
     - type: main
@@ -228,6 +242,12 @@ Features:
   - Dark/light theme matching GitHub's current theme
   - Caches PR summaries to avoid redundant API calls
   - API key stored securely in chrome.storage.local
+  - **Admin Action Suite**:
+      - **Save Edit**: Modify and correct generated summaries.
+      - **Compare**: View AI difference detection report between original and edited summaries.
+      - **Auto-Repair Code**: Trigger the Architect-Coder-Debugger loop to patch the branch.
+      - **Approve & Push**: Instant approval and release changelog publishing.
+      - **Reject / Remove**: Remove the PR from the pending queue.
 
 Security:
   - Manifest V3 (no eval, CSP enforced)

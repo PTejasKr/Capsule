@@ -253,3 +253,41 @@ class GitHubService:
             "html_url": data.get("content", {}).get("html_url", "")
         }
 
+    async def commit_repair_patch(self, repo: str, branch: str, patch_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Commits multiple file changes back to a specific branch as an auto-repair.
+        patch_data format:
+        {
+          "files": [
+            {
+              "path": "backend/api.py",
+              "new_content": "import json\n..."
+            }
+          ],
+          "message": "Auto-repair PR based on AI analysis"
+        }
+        """
+        results = []
+        message = patch_data.get("message", "Auto-repair by AI")
+        files = patch_data.get("files", [])
+        
+        for file in files:
+            path = file.get("path")
+            content = file.get("new_content")
+            if not path or content is None:
+                continue
+                
+            logger.info(f"Applying repair to {path} on branch {branch}")
+            try:
+                res = await self.push_changelog(
+                    path=path,
+                    content=content,
+                    commit_message=message,
+                    target_repo=repo,
+                    branch=branch
+                )
+                results.append(res)
+            except Exception as e:
+                logger.error(f"Failed to push repair to {path}: {e}")
+                
+        return {"status": "success", "files_updated": len(results), "results": results}

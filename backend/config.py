@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     NVIDIA_NIM_BASE_URL: str = Field("https://integrate.api.nvidia.com/v1", description="NVIDIA NIM base API URL")
     NVIDIA_NIM_MODEL: str = Field("meta/llama-3.1-70b-instruct", description="LLM model name to use on NVIDIA NIM")
 
+    # Additional AI Provider configuration (Free Tiers)
+    GEMINI_API_KEY: str = Field("", description="Google Gemini API key")
+    GROQ_API_KEY: str = Field("", description="Groq API key")
+    OPENROUTER_API_KEY: str = Field("", description="OpenRouter API key")
+    OLLAMA_BASE_URL: str = Field("http://localhost:11434/v1", description="Local Ollama base URL")
+
     # Jenkins configuration
     JENKINS_API_TOKEN: str = Field("", description="Jenkins API token for triggering pipelines")
 

@@ -98,6 +98,12 @@ graph TD
 - Chrome extension injects a side panel in GitHub
 - No styling conflicts (Shadow DOM isolated)
 - Shows summaries without page reload
+- **Admin Console**: Edit generated summaries, trigger auto-repairs, compare summaries, and approve/reject directly from the UI
+
+### 🛠️ Kilo Code Multi-Agent Loop
+- Multi-agent orchestration loop (`Architect`, `Coder`, and `Debugger` modes)
+- Automatic verification and self-healing loop with up to 2 code repair attempts
+- Automatic branch patching and commit pushes on successful verification
 
 ### 🚀 Jenkins Integration
 - Multibranch pipeline ready
@@ -111,10 +117,10 @@ graph TD
 | What | Technology | Why |
 |-----|-----------|-----|
 | **API** | FastAPI | Fast, async, great for webhooks |
-| **Database** | PostgreSQL + AsyncPG | Reliable, handles concurrent requests |
+| **Database** | SQLite (Stub) / PostgreSQL + AsyncPG | Flexible persistence options |
 | **Cache** | Redis | Lightning-fast result caching |
 | **Task Queue** | Celery | Handles long-running PR analysis in background |
-| **AI Model** | NVIDIA NIM (Llama 3.1 70B) | Accurate code understanding |
+| **AI Model** | NVIDIA NIM, Gemini, Groq, OpenRouter, Ollama | Multi-provider AI compatibility |
 | **Frontend** | Vanilla JS + Shadow DOM | Works everywhere, no dependencies |
 | **CI/CD** | Jenkins + Multibranch Pipeline | Standard enterprise setup |
 | **Container** | Docker Compose | Everything in one `docker-compose up` |
@@ -669,4 +675,4 @@ MIT - Do whatever you want with this, just don't blame us if it breaks productio
 
 *Questions? Issues? Ideas? Create an issue or start a discussion. We're here to help.*
 
-**Latest version**: 1.0.0 | **Last updated**: 2026 | **Status**: ✅ Production Ready
+**Latest version**: 1.1.0 | **Last updated**: 2026-06-30 | **Status**: ✅ Production Ready
