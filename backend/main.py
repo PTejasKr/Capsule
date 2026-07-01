@@ -25,9 +25,9 @@ async def lifespan(app: FastAPI):
     # 1. Initialize SQLite Database Tables
     await init_db()
     
-    # 2. Pre-load/Initialize active BRD into memory
+    # 2. Pre-load/Initialize active BRD into memory for the default profile
     brd_manager = BRDManager()
-    await brd_manager.load_brd()
+    await brd_manager.load_brd(profile_id=1)
     
     logger.info("Capsule API Service successfully started and ready to handle requests.")
     yield
