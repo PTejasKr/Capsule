@@ -89,3 +89,7 @@ class BRDHistoryItem(BaseModel):
     version: str
     uploaded_at: str
     hash: str
+
+class RepoSetupRequest(BaseModel):
+    repo: str = Field(..., description="The repository in owner/repo format")
+    callback_url: str = Field(..., description="The public base URL of the Capsule server")

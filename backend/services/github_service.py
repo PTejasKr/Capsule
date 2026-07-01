@@ -9,11 +9,12 @@ logger = logging.getLogger("capsule.github_service")
 
 class GitHubService:
     def __init__(self, token: Optional[str] = None):
-        self.token = token or settings.GITHUB_TOKEN
+        self.token = (token or settings.GITHUB_TOKEN or "").strip()
         self.headers = {
-            "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github.v3+json"
         }
+        if self.token:
+            self.headers["Authorization"] = f"token {self.token}"
         self.base_url = "https://api.github.com"
 
     async def _request_with_backoff(self, method: str, url: str, **kwargs) -> httpx.Response:
@@ -291,3 +292,29 @@ class GitHubService:
                 logger.error(f"Failed to push repair to {path}: {e}")
                 
         return {"status": "success", "files_updated": len(results), "results": results}
+
+    async def create_repository_webhook(self, repo: str, callback_url: str) -> Dict[str, Any]:
+        """
+        Creates a GitHub webhook for pull_request events on the target repository.
+        """
+        url = f"{self.base_url}/repos/{repo}/hooks"
+        payload = {
+            "name": "web",
+            "active": True,
+            "events": ["pull_request"],
+            "config": {
+                "url": f"{callback_url.rstrip('/')}/webhooks/github",
+                "content_type": "json",
+                "secret": settings.GITHUB_WEBHOOK_SECRET or ""
+            }
+        }
+        response = await self._request_with_backoff("POST", url, json=payload)
+        if response.status_code == 201:
+            logger.info(f"Successfully created pull_request webhook on repository {repo}")
+            return {"status": "success", "details": response.json()}
+        elif response.status_code == 422:
+            logger.info(f"Webhook already exists on repository {repo}")
+            return {"status": "already_exists", "details": "Webhook already configured"}
+        else:
+            logger.error(f"Failed to create webhook on {repo}: {response.status_code} {response.text}")
+            response.raise_for_status()

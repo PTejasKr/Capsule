@@ -3,6 +3,7 @@ import os
 
 # Set testing flag before importing any app modules
 os.environ["TESTING"] = "true"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./data/test_capsule.db"
 
 # Ensure the backend package root is on PYTHONPATH when running tests from backend/tests
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

@@ -298,13 +298,23 @@ API_KEY=your_generated_key_here
 
 ### Step 3: Set Your Release Repository
 
-This is where Capsule will push changelog updates.
+This is where Capsule will push changelog updates. You can configure this in two ways:
 
+#### Option A: Single-Repository Setup (Simple)
+If you want to keep release logs in the same repository as your codebase, set `CHANGELOG_REPO` to the name of your main code repository:
+```env
+CHANGELOG_REPO=your-github-username/capsule
 ```
-CHANGELOG_REPO=your-github-username/releases
-```
+*   **How it works:** Capsule will create and commit all release logs, summaries, and workflow diagrams to an isolated, separate `changelog` branch inside the same repository.
 
-(You can create this repo on GitHub, or let Capsule auto-create it - we handle both)
+#### Option B: Multi-Repository Setup (Consolidated)
+If you manage multiple repositories and want a single, centralized release repository where changelogs from all projects are compiled:
+```env
+CHANGELOG_REPO=your-github-username/centralized-releases
+```
+*   **How it works:** Capsule will push release updates from all monitored repositories to the `changelog` branch of this dedicated releases repository.
+
+*(Note: The target repository must exist on GitHub, but you do not need to create the `changelog` branch manually. Capsule will check for it and auto-create it if it is missing).*
 
 ### Step 4: Your Business Rules Document
 

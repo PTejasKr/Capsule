@@ -8,7 +8,7 @@ from backend.services.ai_engine import AIEngine
 from backend.services.brd_manager import BRDManager
 from backend.services.changelog_service import ChangelogService
 from backend.database import fetch_one, insert
-from backend.models.schemas import PRSummary, WorkflowImpact, ChangelogEntry, BRDUploadResponse, BRDHistoryItem, ChangeItem, Severity, ChangeType
+from backend.models.schemas import PRSummary, WorkflowImpact, ChangelogEntry, BRDUploadResponse, BRDHistoryItem, ChangeItem, Severity, ChangeType, RepoSetupRequest
 
 logger = logging.getLogger("capsule.api")
 router = APIRouter(prefix="/api", tags=["api"])
@@ -335,3 +335,42 @@ async def get_weekly_changes():
             continue
             
     return summaries
+
+@router.post("/setup-repository", dependencies=[Depends(verify_api_key)])
+async def setup_repository(request: RepoSetupRequest):
+    """
+    Onboards a new repository to Capsule:
+    1. Ensures the 'changelog' branch exists (creates it from default branch if missing).
+    2. Configures a GitHub Webhook programmatically for pull_request events.
+    """
+    repo = request.repo
+    callback_url = request.callback_url
+    
+    logger.info(f"Running automated Capsule infrastructure setup for repository: {repo}")
+    
+    # Step 1: Ensure changelog branch exists
+    try:
+        await github_service.ensure_branch_exists(repo, "changelog")
+    except Exception as e:
+        logger.error(f"Failed to ensure/create changelog branch: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to check/create changelog branch on GitHub: {str(e)}"
+        )
+        
+    # Step 2: Configure Webhook programmatically
+    try:
+        hook_res = await github_service.create_repository_webhook(repo, callback_url)
+    except Exception as e:
+        logger.error(f"Failed to configure GitHub webhook: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to create webhook on GitHub repository: {str(e)}"
+        )
+        
+    return {
+        "status": "success",
+        "message": f"Successfully onboarded repository '{repo}' to Capsule.",
+        "changelog_branch": "configured",
+        "webhook": hook_res
+    }
