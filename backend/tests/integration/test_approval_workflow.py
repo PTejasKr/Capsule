@@ -35,7 +35,7 @@ def test_repair_endpoint_success(mock_execute):
     assert args[0] == "This is repaired"
     assert args[1] is False
 
-@patch("backend.database.fetch_one", new_callable=AsyncMock)
+@patch("backend.routers.api.fetch_one", new_callable=AsyncMock)
 @patch("backend.services.ai_engine.AIEngine.compare_summaries", new_callable=AsyncMock)
 def test_compare_summaries_endpoint(mock_compare, mock_fetch):
     mock_fetch.return_value = {

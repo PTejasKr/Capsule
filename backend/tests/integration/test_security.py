@@ -4,16 +4,19 @@ from fastapi.testclient import TestClient
 from backend.main import app
 from backend.config import settings
 from backend.database import insert, fetch_one, execute_query, init_db
+from unittest.mock import patch, AsyncMock
 
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_cross_pipeline_branch_visibility_control():
+@patch("backend.routers.api.generate_and_push_changelog", new_callable=AsyncMock)
+async def test_cross_pipeline_branch_visibility_control(mock_push):
     """
     Security Test: Verifies that feature branch analyses are not visible without approval,
     while main branch analyses are visible immediately.
     """
     await init_db()
+    mock_push.return_value = {"version": "v1.0.1"}
     
     # 1. Setup - insert a feature branch PR analysis (unapproved)
     repo = "testorg/testsecurity"
