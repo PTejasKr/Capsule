@@ -37,6 +37,45 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    @keyframes footer-scroll-marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    .animate-footer-scroll-marquee {
+      animation: footer-scroll-marquee 40s linear infinite;
+    }
+
+    .marquee-band {
+      position: fixed;
+      top: 40px;
+      left: 0;
+      width: 100vw;
+      overflow: hidden;
+      border-top: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
+      border-bottom: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
+      background: color-mix(in oklch, var(--background) 60%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 16px 0;
+      z-index: 5;
+      transform: rotate(-2deg) scale(1.1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .marquee-content {
+      display: flex;
+      width: max-content;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--secondary);
+    }
+    .marquee-item {
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      padding: 0 24px;
+    }
 
     body {
       background-color: var(--background);
@@ -325,6 +364,27 @@
   <div class="footer-aurora"></div>
   <div class="footer-bg-grid"></div>
   <div class="footer-giant-bg-text">CAPSULE</div>
+
+  <div class="marquee-band">
+    <div class="marquee-content animate-footer-scroll-marquee">
+      <!-- Item 1 -->
+      <div class="marquee-item">
+        <span>AI-Powered PR Analysis</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
+        <span>BRD Enforcement</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
+        <span>Anti-Hallucination Guardrails</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
+        <span>Automated Changelogs</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
+        <span>Absolute Privacy</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
+      </div>
+      <!-- Item 2 (Duplicate for seamless scroll) -->
+      <div class="marquee-item">
+        <span>AI-Powered PR Analysis</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
+        <span>BRD Enforcement</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
+        <span>Anti-Hallucination Guardrails</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
+        <span>Automated Changelogs</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
+        <span>Absolute Privacy</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
+      </div>
+    </div>
+  </div>
 
   <div class="settings-container">
     <div class="logo-row">
