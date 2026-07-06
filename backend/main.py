@@ -87,3 +87,22 @@ def read_root():
         "status": "operational",
     }
 
+@app.get("/debug-env")
+def debug_env():
+    import os
+    db_url = settings.DATABASE_URL
+    redacted_url = db_url.split("@")[-1] if "@" in db_url else db_url
+    env_url = os.environ.get("DATABASE_URL", "NOT_FOUND")
+    redacted_env_url = env_url.split("@")[-1] if "@" in env_url else env_url
+    
+    # We import is_pg here safely
+    from backend.database import is_pg
+    
+    return {
+        "settings_db_url": redacted_url,
+        "env_db_url": redacted_env_url,
+        "is_pg": is_pg(),
+        "has_dotenv": os.path.exists(".env")
+    }
+
+
