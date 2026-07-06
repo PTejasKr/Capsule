@@ -3,117 +3,186 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Capsule Extension Settings</title>
+  <title>Capsule Admin Dashboard</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
     :root {
-      --ivory: #FFFFF0;
-      --bg-main: var(--ivory);
-      --bg-card: rgba(240, 238, 230, 0.85);
-      --border-color: rgba(0, 0, 0, 0.1);
-      --text-main: #000000;
-      --text-muted: #555555;
+      --background: #000000;
+      --foreground: #ffffff;
+      --primary: #ffffff;
+      --secondary: #a3a3a3;
+      --accent: #3b82f6;
+      --destructive: #ef4444;
+
+      --pill-bg-1: color-mix(in oklch, var(--foreground) 3%, transparent);
+      --pill-bg-2: color-mix(in oklch, var(--foreground) 1%, transparent);
+      --pill-shadow: color-mix(in oklch, var(--background) 50%, transparent);
+      --pill-highlight: color-mix(in oklch, var(--foreground) 10%, transparent);
+      --pill-inset-shadow: color-mix(in oklch, var(--background) 80%, transparent);
+      --pill-border: color-mix(in oklch, var(--foreground) 8%, transparent);
       
-      --orange: #d95f02;
-      --orange-hover: #a64500;
-      --light-orange: #ffd8be;
-      
-      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-      --glass-border: 1px solid rgba(0, 0, 0, 0.1);
-      --glass-blur: blur(16px);
+      --pill-bg-1-hover: color-mix(in oklch, var(--foreground) 8%, transparent);
+      --pill-bg-2-hover: color-mix(in oklch, var(--foreground) 2%, transparent);
+      --pill-border-hover: color-mix(in oklch, var(--foreground) 20%, transparent);
+      --pill-shadow-hover: color-mix(in oklch, var(--background) 70%, transparent);
+      --pill-highlight-hover: color-mix(in oklch, var(--foreground) 20%, transparent);
     }
 
-    @keyframes gradientBg {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+    @keyframes footer-breathe {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+      100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
     }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    
+
     body {
-      background: linear-gradient(-45deg, #FFFFF0, #fcfaf0, #fff7ea, #fff1e0);
-      background-size: 400% 400%;
-      animation: gradientBg 15s ease infinite;
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      padding: 40px 20px;
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: 'Plus Jakarta Sans', sans-serif;
       margin: 0;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
-      min-height: 100vh;
+      padding: 40px 20px;
+      overflow-x: hidden;
+      position: relative;
     }
-    
+
+    /* Ambient Light & Grid Background */
+    .footer-aurora {
+      background: radial-gradient(
+        circle at 50% 50%, 
+        color-mix(in oklch, var(--accent) 15%, transparent) 0%, 
+        color-mix(in oklch, var(--secondary) 15%, transparent) 40%, 
+        transparent 70%
+      );
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 80vw;
+      height: 60vh;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      filter: blur(80px);
+      animation: footer-breathe 8s ease-in-out infinite alternate;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .footer-bg-grid {
+      position: fixed;
+      inset: 0;
+      background-size: 60px 60px;
+      background-image: 
+        linear-gradient(to right, color-mix(in oklch, var(--foreground) 3%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 3%, transparent) 1px, transparent 1px);
+      -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .footer-giant-bg-text {
+      position: fixed;
+      bottom: -5vh;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 26vw;
+      line-height: 0.75;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      color: transparent;
+      -webkit-text-stroke: 1px color-mix(in oklch, var(--foreground) 5%, transparent);
+      background: linear-gradient(180deg, color-mix(in oklch, var(--foreground) 10%, transparent) 0%, transparent 60%);
+      -webkit-background-clip: text;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+
     .settings-container {
-      width: 900px;
-      background-color: var(--bg-card);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border: var(--glass-border);
-      border-radius: 16px;
-      box-shadow: var(--glass-shadow);
-      overflow: hidden;
+      width: 1000px;
+      position: relative;
+      z-index: 10;
       display: flex;
       flex-direction: column;
-      transition: transform 0.3s ease;
       animation: fadeIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
     }
-    
+
     .logo-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 28px 36px;
-      border-bottom: 1px solid var(--border-color);
-      background: linear-gradient(135deg, var(--light-orange), rgba(255, 216, 190, 0.4));
+      padding: 0 0 40px 0;
     }
-    
+
     .logo-icon {
-      width: 28px;
-      height: 28px;
-      color: var(--orange);
-      filter: drop-shadow(0 0 2px rgba(217, 95, 2, 0.3));
+      width: 36px;
+      height: 36px;
+      color: var(--foreground);
     }
     
     .logo-text {
-      font-size: 24px;
-      font-weight: 700;
-      color: #1a1a1a;
-      letter-spacing: -0.5px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(180deg, var(--foreground) 0%, color-mix(in oklch, var(--foreground) 40%, transparent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0px 0px 20px color-mix(in oklch, var(--foreground) 15%, transparent));
+    }
+
+    /* Glass Panels (Pills) */
+    .glass-panel {
+      background: linear-gradient(145deg, var(--pill-bg-1) 0%, var(--pill-bg-2) 100%);
+      box-shadow: 
+          0 10px 30px -10px var(--pill-shadow), 
+          inset 0 1px 1px var(--pill-highlight), 
+          inset 0 -1px 2px var(--pill-inset-shadow);
+      border: 1px solid var(--pill-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 24px;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .tabs {
       display: flex;
-      background-color: rgba(247, 246, 240, 0.5);
-      border-bottom: 1px solid var(--border-color);
-      backdrop-filter: blur(8px);
+      gap: 12px;
+      margin-bottom: 30px;
     }
 
     .tab-btn {
       flex: 1;
       padding: 16px;
-      background: none;
-      border: none;
-      color: var(--text-muted);
+      background: linear-gradient(145deg, var(--pill-bg-1) 0%, var(--pill-bg-2) 100%);
+      box-shadow: inset 0 1px 1px var(--pill-highlight);
+      border: 1px solid var(--pill-border);
+      border-radius: 100px;
+      color: var(--secondary);
       font-weight: 600;
-      font-size: 15px;
+      font-size: 14px;
       cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: all 0.3s ease;
-      position: relative;
+      backdrop-filter: blur(16px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: inherit;
+      letter-spacing: 0.5px;
     }
 
     .tab-btn:hover {
-      color: var(--text-main);
-      background-color: rgba(0, 0, 0, 0.03);
+      background: linear-gradient(145deg, var(--pill-bg-1-hover) 0%, var(--pill-bg-2-hover) 100%);
+      border-color: var(--pill-border-hover);
+      color: var(--foreground);
     }
 
     .tab-btn.active {
-      color: var(--orange);
-      border-bottom-color: var(--orange);
-      background-color: rgba(255, 255, 255, 0.5);
+      background: var(--foreground);
+      color: var(--background);
+      border-color: var(--foreground);
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
     }
 
     .tab-content {
@@ -127,160 +196,136 @@
     }
     
     .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-main);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--foreground);
       margin-top: 0;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 24px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
     
     label {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      color: var(--text-main);
+      color: var(--secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
     
     input[type="text"], input[type="password"], select, textarea {
-      background-color: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text-main);
-      font-size: 14px;
+      background: color-mix(in oklch, var(--foreground) 3%, transparent);
+      border: 1px solid var(--pill-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: var(--foreground);
+      font-size: 15px;
       font-family: inherit;
       outline: none;
       transition: all 0.3s ease;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
     
     input:focus, select:focus, textarea:focus {
-      border-color: var(--orange);
-      box-shadow: 0 0 0 3px rgba(217, 95, 2, 0.15), inset 0 2px 4px rgba(0,0,0,0.02);
-      background-color: #ffffff;
-      transform: translateY(-1px);
+      border-color: var(--foreground);
+      background: color-mix(in oklch, var(--foreground) 5%, transparent);
+      box-shadow: 0 0 0 1px var(--foreground);
     }
     
     textarea {
       resize: vertical;
-      min-height: 100px;
+      min-height: 120px;
     }
 
     .help-text {
       font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
+      color: var(--secondary);
     }
     
     .btn-row {
       display: flex;
-      gap: 12px;
-      margin-top: 30px;
+      gap: 16px;
+      margin-top: 32px;
     }
     
     .btn {
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
+      border: 1px solid var(--pill-border);
+      padding: 14px 28px;
+      border-radius: 100px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      font-family: inherit;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      background: linear-gradient(145deg, var(--pill-bg-1) 0%, var(--pill-bg-2) 100%);
+      color: var(--foreground);
+      backdrop-filter: blur(16px);
     }
     
     .btn-primary {
-      background: linear-gradient(135deg, var(--orange), var(--orange-hover));
-      color: #ffffff;
-      box-shadow: 0 4px 10px rgba(217, 95, 2, 0.2);
+      background: var(--foreground);
+      color: var(--background);
+      border-color: var(--foreground);
     }
     
     .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 15px rgba(217, 95, 2, 0.3);
+      transform: scale(1.02);
+      box-shadow: 0 10px 20px rgba(255,255,255,0.15);
     }
 
-    .btn-primary:active {
-      transform: translateY(1px);
-      box-shadow: 0 2px 5px rgba(217, 95, 2, 0.2);
-    }
-    
-    .btn-secondary {
-      background-color: rgba(247, 246, 240, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      color: var(--text-main);
-    }
-    
     .btn-secondary:hover {
-      background-color: #ffffff;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-
-    .btn-secondary:active {
-      transform: translateY(1px);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      background: linear-gradient(145deg, var(--pill-bg-1-hover) 0%, var(--pill-bg-2-hover) 100%);
+      border-color: var(--pill-border-hover);
+      transform: scale(1.02);
     }
     
     .status-message {
       margin-top: 20px;
-      padding: 12px 16px;
-      border-radius: 8px;
+      padding: 14px 18px;
+      border-radius: 12px;
       font-size: 14px;
       display: none;
       animation: fadeIn 0.3s ease;
       font-weight: 500;
+      backdrop-filter: blur(16px);
     }
     
     .status-success {
-      background-color: rgba(26, 127, 55, 0.1);
-      border: 1px solid rgba(26, 127, 55, 0.3);
-      color: #1a7f37;
+      background-color: rgba(35, 134, 54, 0.1);
+      border: 1px solid rgba(35, 134, 54, 0.3);
+      color: #3fb950;
     }
     
     .status-error {
-      background-color: rgba(207, 34, 46, 0.1);
-      border: 1px solid rgba(207, 34, 46, 0.3);
-      color: #cf222e;
+      background-color: rgba(248, 81, 73, 0.1);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      color: #ff7b72;
     }
 
     .grid-container {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      gap: 32px;
     }
 
     .panel {
-      background-color: rgba(255, 255, 255, 0.6);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-      transition: all 0.3s ease;
-    }
-
-    .panel:hover {
-      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
-      background-color: rgba(255, 255, 255, 0.8);
-      transform: translateY(-2px);
+      padding: 32px;
+      border-radius: 24px;
     }
   </style>
 </head>
 <body>
+  <div class="footer-aurora"></div>
+  <div class="footer-bg-grid"></div>
+  <div class="footer-giant-bg-text">CAPSULE</div>
+
   <div class="settings-container">
     <div class="logo-row">
       <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -297,133 +342,132 @@
       <button class="tab-btn" data-tab="tab-brd">BRD Manager</button>
     </div>
     
-    <!-- TAB 1: CONNECTION -->
-    <div id="tab-connection" class="tab-content active">
-      <h3 class="section-title">Backend Connection</h3>
-      <div class="form-group">
-        <label for="input-api-url">Backend Server URL</label>
-        <input type="text" id="input-api-url" placeholder="http://localhost:8000">
-        <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
-      </div>
-      
-      <div class="form-group">
-        <label for="input-api-key">X-API-Key</label>
-        <input type="password" id="input-api-key" placeholder="Enter API Key">
-        <span class="help-text">API Key generated on the backend to authenticate the extension requests.</span>
-      </div>
-      
-      <div class="btn-row">
-        <button id="btn-save-conn" class="btn btn-primary">Save Settings</button>
-        <button id="btn-test-conn" class="btn btn-secondary">Test Connection</button>
-      </div>
-      <div id="status-conn" class="status-message"></div>
-    </div>
-
-    <!-- TAB 2: PROFILES & TEAMS -->
-    <div id="tab-profiles" class="tab-content">
-      <div class="grid-container">
+    <div class="glass-panel">
+      <!-- TAB 1: CONNECTION -->
+      <div id="tab-connection" class="tab-content active">
+        <h3 class="section-title">Backend Connection</h3>
+        <div class="form-group">
+          <label for="input-api-url">Backend Server URL</label>
+          <input type="text" id="input-api-url" placeholder="https://capsule-opal-nine.vercel.app">
+          <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
+        </div>
         
-        <!-- Create Profile -->
-        <div class="panel">
-          <h3 class="section-title">Create Profile</h3>
-          <div class="form-group">
-            <label>Profile Name</label>
-            <input type="text" id="prof-name" placeholder="e.g. Frontend Team">
+        <div class="form-group">
+          <label for="input-api-key">X-API-Key</label>
+          <input type="password" id="input-api-key" placeholder="Enter API Key">
+          <span class="help-text">API Key generated on the backend to authenticate the extension requests.</span>
+        </div>
+        
+        <div class="btn-row">
+          <button id="btn-save-conn" class="btn btn-primary">Save Settings</button>
+          <button id="btn-test-conn" class="btn btn-secondary">Test Connection</button>
+        </div>
+        <div id="status-conn" class="status-message"></div>
+      </div>
+
+      <!-- TAB 2: PROFILES & TEAMS -->
+      <div id="tab-profiles" class="tab-content">
+        <div class="grid-container">
+          <!-- Create Profile -->
+          <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+            <h3 class="section-title">Create Profile</h3>
+            <div class="form-group">
+              <label>Profile Name</label>
+              <input type="text" id="prof-name" placeholder="e.g. Frontend Team">
+            </div>
+            <div class="form-group">
+              <label>Changelog Repo</label>
+              <input type="text" id="prof-changelog" placeholder="owner/repo">
+            </div>
+            <div class="form-group">
+              <label>AI Model</label>
+              <input type="text" id="prof-model" value="meta/llama-3.1-70b-instruct">
+            </div>
+            <div class="form-group">
+              <label>GitHub Token (For Webhooks)</label>
+              <input type="password" id="prof-token" placeholder="ghp_...">
+            </div>
+            <button id="btn-create-prof" class="btn btn-primary" style="margin-top: 8px;">Create Profile</button>
+            <div id="status-create-prof" class="status-message"></div>
           </div>
-          <div class="form-group">
-            <label>Changelog Repo</label>
-            <input type="text" id="prof-changelog" placeholder="owner/repo">
+
+          <!-- Mappings & Webhooks -->
+          <div>
+            <div class="panel glass-panel" style="margin-bottom: 24px; box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+              <h3 class="section-title">Map Repository</h3>
+              <div class="form-group">
+                <label>Select Profile</label>
+                <select id="map-prof-select" class="profile-dropdown" style="background-color: var(--background);">
+                  <option value="">Load profiles first...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Source Repo</label>
+                <input type="text" id="map-repo" placeholder="owner/repo">
+              </div>
+              <button id="btn-map-repo" class="btn btn-primary" style="margin-top: 8px;">Map Repository</button>
+              <div id="status-map" class="status-message"></div>
+            </div>
+
+            <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+              <h3 class="section-title">Deploy Webhook (1-Click)</h3>
+              <div class="form-group">
+                <label>Select Profile</label>
+                <select id="deploy-prof-select" class="profile-dropdown" style="background-color: var(--background);">
+                  <option value="">Load profiles first...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Target Repo</label>
+                <input type="text" id="deploy-repo" placeholder="owner/repo">
+              </div>
+              <div class="form-group">
+                <label>Webhook Payload URL</label>
+                <input type="text" id="deploy-url" placeholder="https://your-server.com/api/webhooks/github?profile_id=1">
+              </div>
+              <button id="btn-deploy-webhook" class="btn btn-primary" style="margin-top: 8px;">Deploy Webhook</button>
+              <div id="status-deploy" class="status-message"></div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>AI Model</label>
-            <input type="text" id="prof-model" value="meta/llama-3.1-70b-instruct">
-          </div>
-          <div class="form-group">
-            <label>GitHub Token (For Webhooks)</label>
-            <input type="password" id="prof-token" placeholder="ghp_...">
-          </div>
-          <button id="btn-create-prof" class="btn btn-primary">Create Profile</button>
-          <div id="status-create-prof" class="status-message"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: BRD MANAGER -->
+      <div id="tab-brd" class="tab-content">
+        <h3 class="section-title">Manage BRDs (Business Requirement Documents)</h3>
+        
+        <div class="form-group" style="width: 50%;">
+          <label>Select Profile</label>
+          <select id="brd-prof-select" class="profile-dropdown" style="background-color: var(--background);">
+            <option value="">Load profiles first...</option>
+          </select>
         </div>
 
-        <!-- Mappings & Webhooks -->
-        <div>
-          <div class="panel" style="margin-bottom: 24px;">
-            <h3 class="section-title">Map Repository</h3>
+        <div class="grid-container" style="margin-top: 32px;">
+          <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+            <h3 class="section-title">Upload New BRD</h3>
             <div class="form-group">
-              <label>Select Profile</label>
-              <select id="map-prof-select" class="profile-dropdown">
-                <option value="">Load profiles first...</option>
-              </select>
+              <label>BRD Content (Markdown)</label>
+              <textarea id="brd-content" rows="10" placeholder="# PRD\n\n## Architecture..."></textarea>
             </div>
             <div class="form-group">
-              <label>Source Repo</label>
-              <input type="text" id="map-repo" placeholder="owner/repo">
+              <label>Version (Optional)</label>
+              <input type="text" id="brd-version" placeholder="v1.0.0">
             </div>
-            <button id="btn-map-repo" class="btn btn-primary">Map Repository</button>
-            <div id="status-map" class="status-message"></div>
+            <button id="btn-upload-brd" class="btn btn-primary" style="margin-top: 8px;">Upload BRD</button>
+            <div id="status-brd" class="status-message"></div>
           </div>
 
-          <div class="panel">
-            <h3 class="section-title">Deploy Webhook (1-Click)</h3>
-            <div class="form-group">
-              <label>Select Profile</label>
-              <select id="deploy-prof-select" class="profile-dropdown">
-                <option value="">Load profiles first...</option>
-              </select>
+          <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+            <h3 class="section-title">Current Active BRD</h3>
+            <div id="current-brd-info" style="font-size: 14px; color: var(--secondary);">
+              Select a profile to view active BRD.
             </div>
-            <div class="form-group">
-              <label>Target Repo</label>
-              <input type="text" id="deploy-repo" placeholder="owner/repo">
-            </div>
-            <div class="form-group">
-              <label>Webhook Payload URL</label>
-              <input type="text" id="deploy-url" placeholder="https://your-server.com/api/webhooks/github?profile_id=1">
-            </div>
-            <button id="btn-deploy-webhook" class="btn btn-primary">Deploy Webhook</button>
-            <div id="status-deploy" class="status-message"></div>
+            <button id="btn-refresh-brd" class="btn btn-secondary" style="margin-top: 24px;">Refresh Status</button>
           </div>
         </div>
-
       </div>
     </div>
-
-    <!-- TAB 3: BRD MANAGER -->
-    <div id="tab-brd" class="tab-content">
-      <h3 class="section-title">Manage BRDs (Business Requirement Documents)</h3>
-      
-      <div class="form-group" style="width: 50%;">
-        <label>Select Profile</label>
-        <select id="brd-prof-select" class="profile-dropdown">
-          <option value="">Load profiles first...</option>
-        </select>
-      </div>
-
-      <div class="grid-container" style="margin-top: 24px;">
-        <div class="panel">
-          <h3 class="section-title">Upload New BRD</h3>
-          <div class="form-group">
-            <label>BRD Content (Markdown)</label>
-            <textarea id="brd-content" rows="10" placeholder="# PRD\n\n## Architecture..."></textarea>
-          </div>
-          <div class="form-group">
-            <label>Version (Optional)</label>
-            <input type="text" id="brd-version" placeholder="v1.0.0">
-          </div>
-          <button id="btn-upload-brd" class="btn btn-primary">Upload BRD</button>
-          <div id="status-brd" class="status-message"></div>
-        </div>
-
-        <div class="panel">
-          <h3 class="section-title">Current Active BRD</h3>
-          <div id="current-brd-info" style="font-size: 13px; color: #8b949e;">
-            Select a profile to view active BRD.
-          </div>
-          <button id="btn-refresh-brd" class="btn btn-secondary" style="margin-top: 16px;">Refresh Status</button>
-        </div>
-      </div>
-    </div>
-
   </div>
   <script src="options.js"></script>
 </body>
