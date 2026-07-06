@@ -38,3 +38,10 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+# Clean up any Byte Order Mark (BOM) or extra whitespaces introduced by terminal encoding/piping
+for field_name in settings.model_fields:
+    val = getattr(settings, field_name)
+    if isinstance(val, str):
+        setattr(settings, field_name, val.lstrip("\ufeff").strip())
+
