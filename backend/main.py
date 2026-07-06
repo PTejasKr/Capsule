@@ -69,10 +69,16 @@ app.add_middleware(
     allow_headers=["X-API-Key", "Content-Type", "Authorization", "x-hub-signature-256"],
 )
 
+from backend.middleware.security import verify_github_signature
+from fastapi import Depends
+
 # Include Routers
 app.include_router(webhooks.router)
 app.include_router(api.router)
 app.include_router(profiles.router)
+
+# Alias route for GitHub Webhook to support GitHub configuration legacy/custom paths
+app.post("/api/webhook/github", status_code=200, dependencies=[Depends(verify_github_signature)])(webhooks.github_webhook)
 
 @app.get("/")
 def read_root():
@@ -80,3 +86,4 @@ def read_root():
         "project": "Capsule",
         "status": "operational",
     }
+
