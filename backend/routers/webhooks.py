@@ -46,14 +46,16 @@ def _is_mocked(obj) -> bool:
     )
 
 def _use_sync_processing() -> bool:
-    # If any of the global placeholder services are mock objects, we are in a test
-    # and should process synchronously to satisfy existing test assertions.
+    # If any of the global placeholder services are mock objects, we are in a test.
+    # Also force sync processing in serverless environments like Vercel where 
+    # running background Celery workers is not supported.
     return (
         _is_mocked(github_service) or
         _is_mocked(ai_engine) or
         _is_mocked(brd_manager) or
         _is_mocked(changelog_service) or
-        os.environ.get("TESTING") == "true"
+        os.environ.get("TESTING") == "true" or
+        os.environ.get("VERCEL") == "1"
     )
 
 # ---------------------------------------------------------------------------
