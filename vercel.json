@@ -1,20 +1,14 @@
 {
   "builds": [
     {
-      "src": "backend/main.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "src": "index.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "backend/main.py"
+      "dest": "index.py"
     }
-  ],
-  "env": {
-    "ENV": "production"
-  }
+  ]
 }
