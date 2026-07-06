@@ -1,4 +1,32 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // --- AUTH LOGIC ---
+  const authOverlay = document.getElementById("auth-overlay");
+  const appContent = document.getElementById("app-content");
+  const btnUnlock = document.getElementById("btn-unlock");
+  const inputMasterPassword = document.getElementById("input-master-password");
+  const authError = document.getElementById("auth-error");
+
+  // Hardcoded passcode for now: 'capsule-admin'
+  const checkAuth = () => {
+    if (inputMasterPassword.value === "capsule-admin") {
+      authOverlay.style.opacity = "0";
+      setTimeout(() => {
+        authOverlay.style.display = "none";
+        appContent.style.display = "flex";
+      }, 400);
+    } else {
+      authError.style.display = "block";
+      setTimeout(() => {
+        authError.style.display = "none";
+      }, 3000);
+    }
+  };
+
+  btnUnlock.addEventListener("click", checkAuth);
+  inputMasterPassword.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") checkAuth();
+  });
+
   // --- TABS LOGIC ---
   const tabBtns = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");

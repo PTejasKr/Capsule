@@ -8,73 +8,38 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
 
     :root {
-      --background: #000000;
-      --foreground: #ffffff;
-      --primary: #ffffff;
-      --secondary: #a3a3a3;
-      --accent: #3b82f6;
+      /* Ivory / Orange Colorway */
+      --background: #FFFFF0;
+      --foreground: #1c1917; /* Dark text for light theme */
+      --primary: #d95f02; /* The orange */
+      --secondary: #78716c;
+      --accent: #d95f02;
       --destructive: #ef4444;
 
-      --pill-bg-1: color-mix(in oklch, var(--foreground) 3%, transparent);
-      --pill-bg-2: color-mix(in oklch, var(--foreground) 1%, transparent);
-      --pill-shadow: color-mix(in oklch, var(--background) 50%, transparent);
-      --pill-highlight: color-mix(in oklch, var(--foreground) 10%, transparent);
-      --pill-inset-shadow: color-mix(in oklch, var(--background) 80%, transparent);
-      --pill-border: color-mix(in oklch, var(--foreground) 8%, transparent);
+      --pill-bg-1: rgba(255, 255, 255, 0.7);
+      --pill-bg-2: rgba(240, 238, 230, 0.85);
+      --pill-shadow: rgba(0, 0, 0, 0.05);
+      --pill-highlight: rgba(255, 255, 255, 0.8);
+      --pill-inset-shadow: rgba(0, 0, 0, 0.02);
+      --pill-border: rgba(217, 95, 2, 0.15); /* Orange tinted border */
       
-      --pill-bg-1-hover: color-mix(in oklch, var(--foreground) 8%, transparent);
-      --pill-bg-2-hover: color-mix(in oklch, var(--foreground) 2%, transparent);
-      --pill-border-hover: color-mix(in oklch, var(--foreground) 20%, transparent);
-      --pill-shadow-hover: color-mix(in oklch, var(--background) 70%, transparent);
-      --pill-highlight-hover: color-mix(in oklch, var(--foreground) 20%, transparent);
+      --pill-bg-1-hover: rgba(255, 255, 255, 0.9);
+      --pill-bg-2-hover: rgba(250, 248, 240, 0.95);
+      --pill-border-hover: rgba(217, 95, 2, 0.4);
     }
 
     @keyframes footer-breathe {
-      0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-      100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+      100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.6; }
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    @keyframes footer-scroll-marquee {
-      from { transform: translateX(0); }
-      to { transform: translateX(-50%); }
-    }
-    .animate-footer-scroll-marquee {
-      animation: footer-scroll-marquee 40s linear infinite;
-    }
-
-    .marquee-band {
-      position: fixed;
-      top: 40px;
-      left: 0;
-      width: 100vw;
-      overflow: hidden;
-      border-top: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
-      border-bottom: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
-      background: color-mix(in oklch, var(--background) 60%, transparent);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 16px 0;
-      z-index: 5;
-      transform: rotate(-2deg) scale(1.1);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    .marquee-content {
-      display: flex;
-      width: max-content;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: var(--secondary);
-    }
-    .marquee-item {
-      display: flex;
-      align-items: center;
-      gap: 48px;
-      padding: 0 24px;
+    
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
     }
 
     body {
@@ -85,7 +50,7 @@
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      padding: 40px 20px;
+      padding: 80px 20px 40px 20px; /* Extra top padding for the band */
       overflow-x: hidden;
       position: relative;
     }
@@ -94,8 +59,8 @@
     .footer-aurora {
       background: radial-gradient(
         circle at 50% 50%, 
-        color-mix(in oklch, var(--accent) 15%, transparent) 0%, 
-        color-mix(in oklch, var(--secondary) 15%, transparent) 40%, 
+        color-mix(in oklch, var(--accent) 30%, transparent) 0%, 
+        rgba(255, 216, 190, 0.5) 40%, 
         transparent 70%
       );
       position: fixed;
@@ -116,8 +81,8 @@
       inset: 0;
       background-size: 60px 60px;
       background-image: 
-        linear-gradient(to right, color-mix(in oklch, var(--foreground) 3%, transparent) 1px, transparent 1px),
-        linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 3%, transparent) 1px, transparent 1px);
+        linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
       -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
       pointer-events: none;
       z-index: 0;
@@ -133,12 +98,54 @@
       font-weight: 900;
       letter-spacing: -0.05em;
       color: transparent;
-      -webkit-text-stroke: 1px color-mix(in oklch, var(--foreground) 5%, transparent);
-      background: linear-gradient(180deg, color-mix(in oklch, var(--foreground) 10%, transparent) 0%, transparent 60%);
+      -webkit-text-stroke: 1px rgba(0,0,0,0.02);
+      background: linear-gradient(180deg, rgba(0,0,0,0.04) 0%, transparent 60%);
       -webkit-background-clip: text;
       pointer-events: none;
       user-select: none;
       z-index: 0;
+    }
+
+    /* The Band (Diagonal Marquee) */
+    .marquee-container {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      width: 100%;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--primary), #ff9a55);
+      border-top: 1px solid rgba(255,255,255,0.2);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      padding: 12px 0;
+      z-index: 10;
+      transform: rotate(-2deg) scale(1.1);
+      box-shadow: 0 10px 30px rgba(217, 95, 2, 0.2);
+    }
+
+    .marquee-content {
+      display: flex;
+      width: 200%;
+      animation: marquee 20s linear infinite;
+    }
+
+    .marquee-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 32px;
+      color: white;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    
+    .marquee-dot {
+      width: 6px;
+      height: 6px;
+      background-color: white;
+      border-radius: 50%;
     }
 
     .settings-container {
@@ -148,29 +155,7 @@
       display: flex;
       flex-direction: column;
       animation: fadeIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-    }
-
-    .logo-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 0 40px 0;
-    }
-
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      color: var(--foreground);
-    }
-    
-    .logo-text {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -1px;
-      background: linear-gradient(180deg, var(--foreground) 0%, color-mix(in oklch, var(--foreground) 40%, transparent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0px 0px 20px color-mix(in oklch, var(--foreground) 15%, transparent));
+      margin-top: 40px; /* Push down below the band */
     }
 
     /* Glass Panels (Pills) */
@@ -202,7 +187,7 @@
       border: 1px solid var(--pill-border);
       border-radius: 100px;
       color: var(--secondary);
-      font-weight: 600;
+      font-weight: 700;
       font-size: 14px;
       cursor: pointer;
       backdrop-filter: blur(16px);
@@ -218,10 +203,10 @@
     }
 
     .tab-btn.active {
-      background: var(--foreground);
-      color: var(--background);
-      border-color: var(--foreground);
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      box-shadow: 0 4px 15px rgba(217, 95, 2, 0.3);
     }
 
     .tab-content {
@@ -236,7 +221,7 @@
     
     .section-title {
       font-size: 20px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--foreground);
       margin-top: 0;
       margin-bottom: 24px;
@@ -253,29 +238,30 @@
     }
     
     label {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
       color: var(--secondary);
       text-transform: uppercase;
       letter-spacing: 1px;
     }
     
     input[type="text"], input[type="password"], select, textarea {
-      background: color-mix(in oklch, var(--foreground) 3%, transparent);
+      background: rgba(255,255,255,0.6);
       border: 1px solid var(--pill-border);
       border-radius: 12px;
       padding: 14px 18px;
       color: var(--foreground);
       font-size: 15px;
       font-family: inherit;
+      font-weight: 500;
       outline: none;
       transition: all 0.3s ease;
     }
     
     input:focus, select:focus, textarea:focus {
-      border-color: var(--foreground);
-      background: color-mix(in oklch, var(--foreground) 5%, transparent);
-      box-shadow: 0 0 0 1px var(--foreground);
+      border-color: var(--primary);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 0 2px rgba(217, 95, 2, 0.1);
     }
     
     textarea {
@@ -286,6 +272,7 @@
     .help-text {
       font-size: 12px;
       color: var(--secondary);
+      font-weight: 500;
     }
     
     .btn-row {
@@ -299,7 +286,7 @@
       padding: 14px 28px;
       border-radius: 100px;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       font-family: inherit;
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -309,14 +296,14 @@
     }
     
     .btn-primary {
-      background: var(--foreground);
-      color: var(--background);
-      border-color: var(--foreground);
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
     }
     
     .btn-primary:hover {
       transform: scale(1.02);
-      box-shadow: 0 10px 20px rgba(255,255,255,0.15);
+      box-shadow: 0 10px 20px rgba(217, 95, 2, 0.2);
     }
 
     .btn-secondary:hover {
@@ -332,20 +319,20 @@
       font-size: 14px;
       display: none;
       animation: fadeIn 0.3s ease;
-      font-weight: 500;
+      font-weight: 600;
       backdrop-filter: blur(16px);
     }
     
     .status-success {
       background-color: rgba(35, 134, 54, 0.1);
       border: 1px solid rgba(35, 134, 54, 0.3);
-      color: #3fb950;
+      color: #2ea043;
     }
     
     .status-error {
       background-color: rgba(248, 81, 73, 0.1);
       border: 1px solid rgba(248, 81, 73, 0.3);
-      color: #ff7b72;
+      color: #da3633;
     }
 
     .grid-container {
@@ -358,177 +345,236 @@
       padding: 32px;
       border-radius: 24px;
     }
+
+    /* Auth Overlay */
+    #auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 240, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.4s ease;
+    }
+
+    .auth-box {
+      width: 400px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .auth-box h2 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--foreground);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-box p {
+      color: var(--secondary);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    #auth-error {
+      color: var(--destructive);
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 16px;
+      display: none;
+    }
+    
+    #app-content {
+      display: none; /* Hidden until authenticated */
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
+  <!-- Auth Overlay -->
+  <div id="auth-overlay">
+    <div class="auth-box glass-panel">
+      <h2>Admin Access</h2>
+      <p>Enter the master password to access the Capsule Dashboard.</p>
+      <div class="form-group" style="text-align: left;">
+        <input type="password" id="input-master-password" placeholder="Passcode" style="text-align: center; font-size: 20px; letter-spacing: 4px;">
+      </div>
+      <button id="btn-unlock" class="btn btn-primary" style="width: 100%;">Unlock</button>
+      <div id="auth-error">Incorrect passcode</div>
+    </div>
+  </div>
+
   <div class="footer-aurora"></div>
   <div class="footer-bg-grid"></div>
   <div class="footer-giant-bg-text">CAPSULE</div>
 
-  <div class="marquee-band">
-    <div class="marquee-content animate-footer-scroll-marquee">
-      <!-- Item 1 -->
-      <div class="marquee-item">
-        <span>AI-Powered PR Analysis</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
-        <span>BRD Enforcement</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
-        <span>Anti-Hallucination Guardrails</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
-        <span>Automated Changelogs</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
-        <span>Absolute Privacy</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
-      </div>
-      <!-- Item 2 (Duplicate for seamless scroll) -->
-      <div class="marquee-item">
-        <span>AI-Powered PR Analysis</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
-        <span>BRD Enforcement</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
-        <span>Anti-Hallucination Guardrails</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
-        <span>Automated Changelogs</span> <span style="color: var(--secondary); opacity: 0.6;">✦</span>
-        <span>Absolute Privacy</span> <span style="color: var(--accent); opacity: 0.6;">✦</span>
-      </div>
+  <!-- The Band -->
+  <div class="marquee-container">
+    <div class="marquee-content">
+      <div class="marquee-item">CAPSULE ADMIN <div class="marquee-dot"></div></div>
+      <div class="marquee-item">SECURE WORKSPACE <div class="marquee-dot"></div></div>
+      <div class="marquee-item">BRD MANAGER <div class="marquee-dot"></div></div>
+      <div class="marquee-item">AI PROFILES <div class="marquee-dot"></div></div>
+      <div class="marquee-item">CAPSULE ADMIN <div class="marquee-dot"></div></div>
+      <div class="marquee-item">SECURE WORKSPACE <div class="marquee-dot"></div></div>
+      <div class="marquee-item">BRD MANAGER <div class="marquee-dot"></div></div>
+      <div class="marquee-item">AI PROFILES <div class="marquee-dot"></div></div>
+      <!-- Duplicate for infinite loop -->
+      <div class="marquee-item">CAPSULE ADMIN <div class="marquee-dot"></div></div>
+      <div class="marquee-item">SECURE WORKSPACE <div class="marquee-dot"></div></div>
+      <div class="marquee-item">BRD MANAGER <div class="marquee-dot"></div></div>
+      <div class="marquee-item">AI PROFILES <div class="marquee-dot"></div></div>
+      <div class="marquee-item">CAPSULE ADMIN <div class="marquee-dot"></div></div>
+      <div class="marquee-item">SECURE WORKSPACE <div class="marquee-dot"></div></div>
+      <div class="marquee-item">BRD MANAGER <div class="marquee-dot"></div></div>
+      <div class="marquee-item">AI PROFILES <div class="marquee-dot"></div></div>
     </div>
   </div>
 
-  <div class="settings-container">
-    <div class="logo-row">
-      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        <path d="M12 8v8"/>
-        <path d="M8 12h8"/>
-      </svg>
-      <span class="logo-text">Capsule Admin Dashboard</span>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="tab-connection">Connection</button>
-      <button class="tab-btn" data-tab="tab-profiles">Profiles & Teams</button>
-      <button class="tab-btn" data-tab="tab-brd">BRD Manager</button>
-    </div>
-    
-    <div class="glass-panel">
-      <!-- TAB 1: CONNECTION -->
-      <div id="tab-connection" class="tab-content active">
-        <h3 class="section-title">Backend Connection</h3>
-        <div class="form-group">
-          <label for="input-api-url">Backend Server URL</label>
-          <input type="text" id="input-api-url" placeholder="https://capsule-opal-nine.vercel.app">
-          <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
-        </div>
-        
-        <div class="form-group">
-          <label for="input-api-key">X-API-Key</label>
-          <input type="password" id="input-api-key" placeholder="Enter API Key">
-          <span class="help-text">API Key generated on the backend to authenticate the extension requests.</span>
-        </div>
-        
-        <div class="btn-row">
-          <button id="btn-save-conn" class="btn btn-primary">Save Settings</button>
-          <button id="btn-test-conn" class="btn btn-secondary">Test Connection</button>
-        </div>
-        <div id="status-conn" class="status-message"></div>
+  <!-- Hidden Content -->
+  <div id="app-content" style="display: none;">
+    <div class="settings-container">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-connection">Connection</button>
+        <button class="tab-btn" data-tab="tab-profiles">Profiles & Teams</button>
+        <button class="tab-btn" data-tab="tab-brd">BRD Manager</button>
       </div>
+      
+      <div class="glass-panel">
+        <!-- TAB 1: CONNECTION -->
+        <div id="tab-connection" class="tab-content active">
+          <h3 class="section-title">Backend Connection</h3>
+          <div class="form-group">
+            <label for="input-api-url">Backend Server URL</label>
+            <input type="text" id="input-api-url" placeholder="https://capsule-opal-nine.vercel.app">
+            <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
+          </div>
+          
+          <div class="form-group">
+            <label for="input-api-key">X-API-Key</label>
+            <input type="password" id="input-api-key" placeholder="Enter API Key">
+            <span class="help-text">API Key generated on the backend to authenticate the extension requests.</span>
+          </div>
+          
+          <div class="btn-row">
+            <button id="btn-save-conn" class="btn btn-primary">Save Settings</button>
+            <button id="btn-test-conn" class="btn btn-secondary">Test Connection</button>
+          </div>
+          <div id="status-conn" class="status-message"></div>
+        </div>
 
-      <!-- TAB 2: PROFILES & TEAMS -->
-      <div id="tab-profiles" class="tab-content">
-        <div class="grid-container">
-          <!-- Create Profile -->
-          <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
-            <h3 class="section-title">Create Profile</h3>
-            <div class="form-group">
-              <label>Profile Name</label>
-              <input type="text" id="prof-name" placeholder="e.g. Frontend Team">
+        <!-- TAB 2: PROFILES & TEAMS -->
+        <div id="tab-profiles" class="tab-content">
+          <div class="grid-container">
+            <!-- Create Profile -->
+            <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+              <h3 class="section-title">Create Profile</h3>
+              <div class="form-group">
+                <label>Profile Name</label>
+                <input type="text" id="prof-name" placeholder="e.g. Frontend Team">
+              </div>
+              <div class="form-group">
+                <label>Changelog Repo</label>
+                <input type="text" id="prof-changelog" placeholder="owner/repo">
+              </div>
+              <div class="form-group">
+                <label>AI Model</label>
+                <input type="text" id="prof-model" value="meta/llama-3.1-70b-instruct">
+              </div>
+              <div class="form-group">
+                <label>GitHub Token (For Webhooks)</label>
+                <input type="password" id="prof-token" placeholder="ghp_...">
+              </div>
+              <button id="btn-create-prof" class="btn btn-primary" style="margin-top: 8px;">Create Profile</button>
+              <div id="status-create-prof" class="status-message"></div>
             </div>
-            <div class="form-group">
-              <label>Changelog Repo</label>
-              <input type="text" id="prof-changelog" placeholder="owner/repo">
+
+            <!-- Mappings & Webhooks -->
+            <div>
+              <div class="panel glass-panel" style="margin-bottom: 24px; box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+                <h3 class="section-title">Map Repository</h3>
+                <div class="form-group">
+                  <label>Select Profile</label>
+                  <select id="map-prof-select" class="profile-dropdown" style="background-color: rgba(255,255,255,0.6);">
+                    <option value="">Load profiles first...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Source Repo</label>
+                  <input type="text" id="map-repo" placeholder="owner/repo">
+                </div>
+                <button id="btn-map-repo" class="btn btn-primary" style="margin-top: 8px;">Map Repository</button>
+                <div id="status-map" class="status-message"></div>
+              </div>
+
+              <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+                <h3 class="section-title">Deploy Webhook (1-Click)</h3>
+                <div class="form-group">
+                  <label>Select Profile</label>
+                  <select id="deploy-prof-select" class="profile-dropdown" style="background-color: rgba(255,255,255,0.6);">
+                    <option value="">Load profiles first...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Target Repo</label>
+                  <input type="text" id="deploy-repo" placeholder="owner/repo">
+                </div>
+                <div class="form-group">
+                  <label>Webhook Payload URL</label>
+                  <input type="text" id="deploy-url" placeholder="https://your-server.com/api/webhooks/github?profile_id=1">
+                </div>
+                <button id="btn-deploy-webhook" class="btn btn-primary" style="margin-top: 8px;">Deploy Webhook</button>
+                <div id="status-deploy" class="status-message"></div>
+              </div>
             </div>
-            <div class="form-group">
-              <label>AI Model</label>
-              <input type="text" id="prof-model" value="meta/llama-3.1-70b-instruct">
-            </div>
-            <div class="form-group">
-              <label>GitHub Token (For Webhooks)</label>
-              <input type="password" id="prof-token" placeholder="ghp_...">
-            </div>
-            <button id="btn-create-prof" class="btn btn-primary" style="margin-top: 8px;">Create Profile</button>
-            <div id="status-create-prof" class="status-message"></div>
+          </div>
+        </div>
+
+        <!-- TAB 3: BRD MANAGER -->
+        <div id="tab-brd" class="tab-content">
+          <h3 class="section-title">Manage BRDs (Business Requirement Documents)</h3>
+          
+          <div class="form-group" style="width: 50%;">
+            <label>Select Profile</label>
+            <select id="brd-prof-select" class="profile-dropdown" style="background-color: rgba(255,255,255,0.6);">
+              <option value="">Load profiles first...</option>
+            </select>
           </div>
 
-          <!-- Mappings & Webhooks -->
-          <div>
-            <div class="panel glass-panel" style="margin-bottom: 24px; box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
-              <h3 class="section-title">Map Repository</h3>
+          <div class="grid-container" style="margin-top: 32px;">
+            <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
+              <h3 class="section-title">Upload New BRD</h3>
               <div class="form-group">
-                <label>Select Profile</label>
-                <select id="map-prof-select" class="profile-dropdown" style="background-color: var(--background);">
-                  <option value="">Load profiles first...</option>
-                </select>
+                <label>BRD Content (Markdown)</label>
+                <textarea id="brd-content" rows="10" placeholder="# PRD\n\n## Architecture..."></textarea>
               </div>
               <div class="form-group">
-                <label>Source Repo</label>
-                <input type="text" id="map-repo" placeholder="owner/repo">
+                <label>Version (Optional)</label>
+                <input type="text" id="brd-version" placeholder="v1.0.0">
               </div>
-              <button id="btn-map-repo" class="btn btn-primary" style="margin-top: 8px;">Map Repository</button>
-              <div id="status-map" class="status-message"></div>
+              <button id="btn-upload-brd" class="btn btn-primary" style="margin-top: 8px;">Upload BRD</button>
+              <div id="status-brd" class="status-message"></div>
             </div>
 
             <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
-              <h3 class="section-title">Deploy Webhook (1-Click)</h3>
-              <div class="form-group">
-                <label>Select Profile</label>
-                <select id="deploy-prof-select" class="profile-dropdown" style="background-color: var(--background);">
-                  <option value="">Load profiles first...</option>
-                </select>
+              <h3 class="section-title">Current Active BRD</h3>
+              <div id="current-brd-info" style="font-size: 14px; color: var(--secondary);">
+                Select a profile to view active BRD.
               </div>
-              <div class="form-group">
-                <label>Target Repo</label>
-                <input type="text" id="deploy-repo" placeholder="owner/repo">
-              </div>
-              <div class="form-group">
-                <label>Webhook Payload URL</label>
-                <input type="text" id="deploy-url" placeholder="https://your-server.com/api/webhooks/github?profile_id=1">
-              </div>
-              <button id="btn-deploy-webhook" class="btn btn-primary" style="margin-top: 8px;">Deploy Webhook</button>
-              <div id="status-deploy" class="status-message"></div>
+              <button id="btn-refresh-brd" class="btn btn-secondary" style="margin-top: 24px;">Refresh Status</button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 3: BRD MANAGER -->
-      <div id="tab-brd" class="tab-content">
-        <h3 class="section-title">Manage BRDs (Business Requirement Documents)</h3>
-        
-        <div class="form-group" style="width: 50%;">
-          <label>Select Profile</label>
-          <select id="brd-prof-select" class="profile-dropdown" style="background-color: var(--background);">
-            <option value="">Load profiles first...</option>
-          </select>
-        </div>
-
-        <div class="grid-container" style="margin-top: 32px;">
-          <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
-            <h3 class="section-title">Upload New BRD</h3>
-            <div class="form-group">
-              <label>BRD Content (Markdown)</label>
-              <textarea id="brd-content" rows="10" placeholder="# PRD\n\n## Architecture..."></textarea>
-            </div>
-            <div class="form-group">
-              <label>Version (Optional)</label>
-              <input type="text" id="brd-version" placeholder="v1.0.0">
-            </div>
-            <button id="btn-upload-brd" class="btn btn-primary" style="margin-top: 8px;">Upload BRD</button>
-            <div id="status-brd" class="status-message"></div>
-          </div>
-
-          <div class="panel glass-panel" style="box-shadow: none; border: 1px solid var(--pill-border); background: transparent;">
-            <h3 class="section-title">Current Active BRD</h3>
-            <div id="current-brd-info" style="font-size: 14px; color: var(--secondary);">
-              Select a profile to view active BRD.
-            </div>
-            <button id="btn-refresh-brd" class="btn btn-secondary" style="margin-top: 24px;">Refresh Status</button>
           </div>
         </div>
       </div>
     </div>
   </div>
+
   <script src="options.js"></script>
 </body>
 </html>
