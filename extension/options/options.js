@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputApiKey = document.getElementById("input-api-key");
   
   chrome.storage.local.get(["apiUrl", "apiKey"], (items) => {
-    inputApiUrl.value = items.apiUrl || "http://localhost:8000";
+    inputApiUrl.value = items.apiUrl || "https://capsule-opal-nine.vercel.app";
     inputApiKey.value = items.apiKey || "";
   });
 
