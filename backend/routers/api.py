@@ -2,7 +2,7 @@ import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from typing import Optional, List
-from backend.middleware.security import verify_api_key
+from backend.middleware.security import verify_api_key, validate_repo_name
 from backend.services.github_service import GitHubService
 from backend.services.ai_engine import AIEngine
 from backend.services.brd_manager import BRDManager
@@ -18,6 +18,11 @@ github_service = GitHubService()
 ai_engine = AIEngine()
 brd_manager = BRDManager()
 changelog_service = ChangelogService(github_service)
+
+def validate_repo(repo: str) -> str:
+    if not validate_repo_name(repo):
+        raise HTTPException(status_code=400, detail="Invalid repository format")
+    return repo
 
 async def _reconstruct_summary_from_row(row: dict) -> PRSummary:
     """Helper to reconstruct PRSummary schema from DB row."""
@@ -58,7 +63,7 @@ async def health_check():
     return {"status": "healthy", "service": "capsule-api"}
 
 @router.get("/pr/{pr_number}/summary", dependencies=[Depends(verify_api_key)], response_model=PRSummary)
-async def get_pr_summary(pr_number: int, repo: str):
+async def get_pr_summary(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Fetches the saved PR analysis summary from database.
     """
@@ -82,7 +87,7 @@ async def get_pr_summary(pr_number: int, repo: str):
     return await _reconstruct_summary_from_row(row)
 
 @router.get("/pr/{pr_number}/workflow-impact", dependencies=[Depends(verify_api_key)], response_model=WorkflowImpact)
-async def get_pr_workflow_impact(pr_number: int, repo: str):
+async def get_pr_workflow_impact(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Fetches specifically the workflow impact analysis for a PR.
     """
@@ -113,7 +118,7 @@ async def get_pr_workflow_impact(pr_number: int, repo: str):
     )
 
 @router.get("/pr/{pr_number}/changelog-preview", dependencies=[Depends(verify_api_key)], response_model=ChangelogEntry)
-async def get_changelog_preview(pr_number: int, repo: str):
+async def get_changelog_preview(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Generates a preview of the changelog entry for this PR.
     """
@@ -184,7 +189,7 @@ async def generate_and_push_changelog(pr_number: int, repo: Optional[str] = None
     }
 
 @router.post("/pr/{pr_number}/approve", dependencies=[Depends(verify_api_key)])
-async def approve_pr(pr_number: int, repo: str):
+async def approve_pr(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Approves a feature branch analysis, making it visible to the extension,
     and automatically generates and pushes the changelog.
@@ -220,7 +225,7 @@ class RepairSummaryRequest(BaseModel):
     edited_summary: str
 
 @router.post("/pr/{pr_number}/repair", dependencies=[Depends(verify_api_key)])
-async def repair_pr_summary(pr_number: int, repo: str, request: RepairSummaryRequest):
+async def repair_pr_summary(pr_number: int, request: RepairSummaryRequest, repo: str = Depends(validate_repo)):
     """
     Allows the Admin to repair or edit the generated summary before approval.
     """
@@ -232,7 +237,7 @@ async def repair_pr_summary(pr_number: int, repo: str, request: RepairSummaryReq
     return {"status": "success", "message": "Summary updated."}
 
 @router.get("/pr/{pr_number}/compare", dependencies=[Depends(verify_api_key)])
-async def compare_pr_summaries(pr_number: int, repo: str):
+async def compare_pr_summaries(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Uses OpenRouter to compare the original AI summary with the currently edited summary.
     """
@@ -271,7 +276,7 @@ async def get_pending_prs():
     return summaries
 
 @router.post("/pr/{pr_number}/reject", dependencies=[Depends(verify_api_key)])
-async def reject_pr(pr_number: int, repo: str):
+async def reject_pr(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Rejects a PR by removing it from the database so it no longer appears in the pending queue.
     """
@@ -283,7 +288,7 @@ async def reject_pr(pr_number: int, repo: str):
     return {"status": "success", "message": "PR rejected and removed from pending queue."}
 
 @router.post("/pr/{pr_number}/auto-repair", dependencies=[Depends(verify_api_key)])
-async def auto_repair_pr(pr_number: int, repo: str):
+async def auto_repair_pr(pr_number: int, repo: str = Depends(validate_repo)):
     """
     Uses the Multi-LLM architecture to automatically generate and apply code fixes for a PR.
     """

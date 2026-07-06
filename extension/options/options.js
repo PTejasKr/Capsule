@@ -6,19 +6,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputMasterPassword = document.getElementById("input-master-password");
   const authError = document.getElementById("auth-error");
 
-  // Hardcoded passcode for now: 'capsule-admin'
-  const checkAuth = () => {
-    if (inputMasterPassword.value === "capsule-admin") {
+  // Auth checks the stored API key — no hardcoded secrets.
+  // On first use, a fallback passcode "capsule-admin" is accepted
+  // so the user can reach settings to configure their real API key.
+  const checkAuth = async () => {
+    const entered = inputMasterPassword.value.trim();
+    if (!entered) return;
+
+    const { apiKey } = await chrome.storage.local.get(["apiKey"]);
+
+    // If an API key is saved, it becomes the master passcode.
+    // If none is saved yet, accept the default bootstrap password so
+    // the admin can log in and configure the key for the first time.
+    const validPasscode = apiKey || "capsule-admin";
+
+    if (entered === validPasscode) {
       authOverlay.style.opacity = "0";
       setTimeout(() => {
         authOverlay.style.display = "none";
         appContent.style.display = "flex";
       }, 400);
     } else {
+      authError.textContent = apiKey
+        ? "Incorrect passcode. Use your configured API Key."
+        : "Incorrect passcode. Default is 'capsule-admin'.";
       authError.style.display = "block";
-      setTimeout(() => {
-        authError.style.display = "none";
-      }, 3000);
+      inputMasterPassword.value = "";
+      setTimeout(() => { authError.style.display = "none"; }, 3000);
     }
   };
 

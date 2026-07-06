@@ -1,4 +1,5 @@
 import re
+import json
 import logging
 from typing import List, Dict, Any, Tuple
 from backend.middleware.security import sanitize_text
@@ -152,6 +153,13 @@ class GuardrailsService:
             validated["confidence_score"] = min(max(val, 0.0), 1.0)
         except (ValueError, TypeError):
             validated["confidence_score"] = 1.0
+
+        # 4. Check for leaked system instructions
+        output_str = json.dumps(validated).lower()
+        leak_keywords = ["system prompt", "you are an ai", "developer instructions", "ignore previous"]
+        for kw in leak_keywords:
+            if kw in output_str:
+                violations.append(f"Output contains potential leaked instructions: '{kw}'")
 
         return validated, violations
 

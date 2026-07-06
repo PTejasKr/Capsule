@@ -21,8 +21,16 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
 
 async def verify_github_signature(request: Request):
     if not settings.GITHUB_WEBHOOK_SECRET:
-        # If secret is not configured, skip verification (log a warning in production)
-        logger.warning("GitHub webhook secret is not set. Skipping verification.")
+        # In production, a missing secret is a misconfiguration — reject the request.
+        # Only skip in a local dev environment where ENV=development is explicitly set.
+        import os
+        if os.environ.get("ENV", "production").lower() == "production":
+            logger.error("GITHUB_WEBHOOK_SECRET is not configured. Rejecting webhook.")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Webhook verification is not configured on this server."
+            )
+        logger.warning("DEV MODE: GitHub webhook secret is not set. Skipping verification.")
         return
 
     signature_header = request.headers.get("x-hub-signature-256")
@@ -35,9 +43,15 @@ async def verify_github_signature(request: Request):
 
     # Payload must be read as raw bytes to calculate signature
     body = await request.body()
-    
-    # Check signature
-    sha_name, signature = signature_header.split("=")
+
+    # Validate format before splitting
+    if "=" not in signature_header:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Malformed signature header"
+        )
+
+    sha_name, _, signature = signature_header.partition("=")
     if sha_name != "sha256":
         logger.error("Signature algorithm is not sha256")
         raise HTTPException(
@@ -50,13 +64,24 @@ async def verify_github_signature(request: Request):
         msg=body,
         digestmod=hashlib.sha256
     )
-    
+
     if not hmac.compare_digest(mac.hexdigest(), signature):
         logger.error("Signature verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid signature"
         )
+
+def validate_repo_name(repo: str) -> bool:
+    """
+    Validates a GitHub repository name (owner/repo).
+    Prevents path traversal and injection attacks.
+    """
+    if not repo:
+        return False
+    # Pattern: ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$
+    pattern = re.compile(r"^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$")
+    return bool(pattern.match(repo))
 
 def sanitize_text(text: str) -> str:
     """
@@ -83,6 +108,15 @@ def sanitize_text(text: str) -> str:
     # (Matches long strings of letters/numbers ending in = or ==)
     base64_pattern = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
     sanitized = re.sub(base64_pattern, "[REMOVED POTENTIAL BASE64 PAYLOAD]", sanitized)
+    
+    # 2.5 Redact potential secrets to prevent data leaks
+    secret_patterns = [
+        r"(?i)AKIA[0-9A-Z]{16}", # AWS Key
+        r"(?i)ghp_[a-zA-Z0-9]{36}", # GitHub PAT
+        r"eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*" # JWT
+    ]
+    for pattern in secret_patterns:
+        sanitized = re.sub(pattern, "[REDACTED SECRET]", sanitized)
     
     # 3. Unicode Homoglyph Attack prevention
     # We normalize any weird characters or replace non-standard lookalikes if needed.

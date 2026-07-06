@@ -21,10 +21,14 @@ def make_request(url, method="GET", headers=None, payload=None):
         data = json.dumps(payload).encode("utf-8")
         req_headers["Content-Type"] = "application/json"
         
+    # Security: only allow https:// requests to prevent file:// or custom scheme abuse (B310)
+    if not url.startswith("https://"):
+        return 400, {"detail": f"Blocked request to non-HTTPS URL: {url}"}
+
     req = urllib.request.Request(url, data=data, headers=req_headers, method=method)
-    
+
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req) as response:  # nosec B310 — URL scheme validated above
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try:

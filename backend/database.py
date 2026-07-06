@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import sqlite3
@@ -319,16 +320,31 @@ async def insert(table: str, data: dict) -> int:
         elif table == "brd_versions":
             conflict_targets = ["hash"]
 
+        # Security: validate table and column names against a strict allowlist
+        # to prevent SQL injection through dynamic SQL construction. (Bandit B608)
+        _ALLOWED_TABLES = {
+            "pr_analyses", "profiles", "repository_mappings",
+            "brd_versions", "changelog_entries", "audit_log"
+        }
+        _ALLOWED_COLUMNS = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+        if table not in _ALLOWED_TABLES:
+            raise ValueError(f"INSERT rejected: table '{table}' is not in the allowlist.")
+        for col in keys:
+            if not _ALLOWED_COLUMNS.match(col):
+                raise ValueError(f"INSERT rejected: column name '{col}' contains invalid characters.")
+
         placeholders = ", ".join([f"${i+1}" for i in range(len(keys))])
         columns = ", ".join(keys)
-        
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+
+        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608 — table/col names are allowlisted above
+
         if conflict_targets:
             conflict_cols = ", ".join(conflict_targets)
             update_cols = [k for k in keys if k not in conflict_targets]
             if update_cols:
                 update_stmt = ", ".join([f"{col} = EXCLUDED.{col}" for col in update_cols])
-                sql += f" ON CONFLICT ({conflict_cols}) DO UPDATE SET {update_stmt}"
+                sql += f" ON CONFLICT ({conflict_cols}) DO UPDATE SET {update_stmt}"  # nosec B608 — cols from allowlist
             else:
                 sql += f" ON CONFLICT ({conflict_cols}) DO NOTHING"
         

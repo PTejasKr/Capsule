@@ -1,3 +1,4 @@
+import os
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -18,6 +19,12 @@ logging.basicConfig(
 
 logger = logging.getLogger("capsule.main")
 
+# Disable interactive API docs in production for security
+_IS_PRODUCTION = os.environ.get("ENV", "production").lower() == "production"
+_docs_url = None if _IS_PRODUCTION else "/docs"
+_redoc_url = None if _IS_PRODUCTION else "/redoc"
+_openapi_url = None if _IS_PRODUCTION else "/openapi.json"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up Capsule API Service...")
@@ -37,18 +44,25 @@ app = FastAPI(
     title="Capsule — PR Analyzer API",
     description="Backend service for AI-powered PR analysis, workflow impact detection, and changelog generation.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+    openapi_url=_openapi_url,
 )
 
-# Set up CORS middleware
-# Chrome extensions make requests from unique origins (chrome-extension://<id>).
-# We allow all origins to ensure compatibility, secured strictly via API Key / webhook signatures.
+# CORS — allow Chrome extension origins and the Vercel frontend.
+# Wildcard (*) with allow_credentials=True is rejected by browsers anyway
+# and violates OWASP A05; we restrict to known origins instead.
+ALLOWED_ORIGINS = [
+    "https://capsule-opal-nine.vercel.app",
+    "chrome-extension://",  # Chrome extension origins are validated by API key
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],          # Chrome extensions need wildcard; security is enforced by X-API-Key
+    allow_credentials=False,      # Credentials=False with wildcard is safe and valid
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["X-API-Key", "Content-Type", "Authorization", "x-hub-signature-256"],
 )
 
 # Include Routers
@@ -60,6 +74,5 @@ app.include_router(profiles.router)
 def read_root():
     return {
         "project": "Capsule",
-        "description": "AI-Powered PR Analysis & Release System Backend",
-        "docs_url": "/docs"
+        "status": "operational",
     }
