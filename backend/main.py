@@ -1,4 +1,8 @@
 import os
+import sys
+# Resolve package paths for Vercel/serverless environments
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
