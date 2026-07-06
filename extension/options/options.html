@@ -50,9 +50,11 @@
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      padding: 80px 20px 40px 20px; /* Extra top padding for the band */
+      /* Responsive top padding — band is ~48px, add breathing room */
+      padding: clamp(60px, 8vh, 100px) clamp(12px, 4vw, 40px) 40px;
       overflow-x: hidden;
       position: relative;
+      box-sizing: border-box;
     }
 
     /* Ambient Light & Grid Background */
@@ -148,13 +150,15 @@
     }
 
     .settings-container {
-      width: 1000px;
+      /* Fluid container — max 1100px, min 0, with side padding built into body */
+      width: 100%;
+      max-width: 1100px;
       position: relative;
       z-index: 10;
       display: flex;
       flex-direction: column;
       animation: fadeIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-      margin-top: 40px; /* Push down below the band */
+      margin-top: clamp(20px, 4vh, 50px);
     }
 
     /* Glass Panels (Pills) */
@@ -210,7 +214,8 @@
 
     .tab-content {
       display: none;
-      padding: 40px;
+      /* Fluid padding — shrinks on smaller screens */
+      padding: clamp(20px, 4vw, 40px);
     }
 
     .tab-content.active {
@@ -341,11 +346,107 @@
     }
 
     .panel {
-      padding: 32px;
+      padding: clamp(16px, 3vw, 32px);
       border-radius: 24px;
     }
 
-    /* Auth Overlay */
+    /* Auth box — fluid on small screens */
+    .auth-box {
+      width: clamp(280px, 90vw, 440px);
+      text-align: center;
+      padding: clamp(24px, 5vw, 40px);
+    }
+
+    /* =====================
+       RESPONSIVE BREAKPOINTS
+    ===================== */
+
+    /* Tablet — ≤900px: stack grid, shrink tabs */
+    @media (max-width: 900px) {
+      body {
+        padding-top: clamp(56px, 8vh, 80px);
+      }
+
+      .settings-container {
+        max-width: 100%;
+      }
+
+      .grid-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tab-btn {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 120px;
+        padding: 12px;
+        font-size: 13px;
+      }
+    }
+
+    /* Mobile — ≤600px: full-width forms, smaller type */
+    @media (max-width: 600px) {
+      body {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .tab-btn {
+        flex: 1 1 100%;
+        font-size: 13px;
+        padding: 12px 16px;
+      }
+
+      .btn-row {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .btn-row .btn {
+        width: 100%;
+      }
+
+      input[type="text"], input[type="password"], select, textarea {
+        font-size: 14px;
+        padding: 12px 14px;
+      }
+
+      .section-title {
+        font-size: 16px;
+      }
+
+      .marquee-item {
+        font-size: 12px;
+        gap: 10px;
+        padding: 0 18px;
+      }
+
+      .footer-giant-bg-text {
+        font-size: 40vw;
+      }
+    }
+
+    /* Small phone — ≤400px */
+    @media (max-width: 400px) {
+      .auth-box h2 {
+        font-size: 22px;
+      }
+
+      .glass-panel {
+        border-radius: 16px;
+      }
+
+      .panel {
+        padding: 14px;
+        border-radius: 16px;
+      }
+    }
+
     #auth-overlay {
       position: fixed;
       inset: 0;
