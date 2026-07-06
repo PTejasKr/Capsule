@@ -5,7 +5,8 @@
   "description": "Analyzes GitHub PRs against your BRD, detects workflow impacts, and previews release changelogs.",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://github.com/*"
