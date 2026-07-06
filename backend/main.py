@@ -101,8 +101,12 @@ def debug_env():
     return {
         "settings_db_url": redacted_url,
         "env_db_url": redacted_env_url,
+        "schema": db_url.split("://")[0] if "://" in db_url else "NO_SCHEMA",
+        "raw_url_starts_with_postgres": db_url.startswith("postgres"),
+        "raw_url_starts_with_postgresql": db_url.startswith("postgresql"),
         "is_pg": is_pg(),
         "has_dotenv": os.path.exists(".env")
     }
+
 
 
