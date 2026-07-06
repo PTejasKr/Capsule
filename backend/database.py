@@ -143,6 +143,20 @@ async def init_db():
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Seed default profile with ID=1 if not exists
+            row = await conn.fetchrow("SELECT id FROM profiles WHERE id = 1")
+            if not row:
+                await conn.execute("""
+                    INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content)
+                    VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')
+                """)
+                # Sync serialization sequence
+                try:
+                    await conn.execute("SELECT setval('profiles_id_seq', 1)")
+                except Exception:
+                    pass
+                logger.info("Seeded default profile with ID 1 in PostgreSQL")
         logger.info("PostgreSQL database tables initialized successfully")
     else:
         logger.info(f"Initializing SQLite database at: {DB_PATH}")
@@ -231,6 +245,16 @@ async def init_db():
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Seed default profile with ID=1 if not exists
+            async with db.execute("SELECT id FROM profiles WHERE id = 1") as cursor:
+                row = await cursor.fetchone()
+            if not row:
+                await db.execute("""
+                    INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content)
+                    VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')
+                """)
+                logger.info("Seeded default profile with ID 1 in SQLite")
             
             await db.commit()
         logger.info("SQLite database tables initialized successfully")
