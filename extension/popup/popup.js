@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Settings redirect
   btnSettings.addEventListener("click", () => {
-    chrome.tabs.create({ url: "options/options.html" });
+    chrome.tabs.create({ url: chrome.runtime.getURL("options/options.html") });
   });
 
   btnRetry.addEventListener("click", loadPrAnalysis);
