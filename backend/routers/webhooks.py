@@ -185,7 +185,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
                         "lines_added": 120,
                         "lines_deleted": 40,
                         "pr_number": pr_number,
-                        "pushed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
                     from backend.database import execute
                     await execute("DELETE FROM changelog_entries WHERE version = ?", (latest_ver,))

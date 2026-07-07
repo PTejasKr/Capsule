@@ -248,7 +248,6 @@ class ChangelogService:
             "lines_added": entry.lines_added,
             "lines_deleted": entry.lines_deleted,
             "pr_number": entry.pr_number,
-            "pushed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         await insert("changelog_entries", db_data)
         
