@@ -395,3 +395,16 @@ async def insert(table: str, data: dict) -> int:
             async with db.execute(sql, processed_values) as cursor:
                 await db.commit()
                 return cursor.lastrowid
+
+async def execute(sql: str, params: tuple = ()) -> None:
+    is_postgres = is_pg()
+    sql_converted = convert_placeholders(sql, is_postgres)
+    if is_postgres:
+        pool = await get_pg_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(sql_converted, *params)
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(sql_converted, params)
+            await db.commit()
+
