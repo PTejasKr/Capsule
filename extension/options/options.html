@@ -496,12 +496,27 @@
   <div id="auth-overlay">
     <div class="auth-box glass-panel">
       <h2>Admin Access</h2>
-      <p>Enter the master password to access the Capsule Dashboard.</p>
-      <div class="form-group" style="text-align: left;">
-        <input type="password" id="input-master-password" placeholder="Passcode" style="text-align: center; font-size: 20px; letter-spacing: 4px;">
+      <p>Authenticate via your GitHub organization to access the dashboard.</p>
+      
+      <div class="form-group" style="text-align: left; margin-bottom: 16px;">
+        <label for="input-login-backend-url" style="font-size: 12px; font-weight: 600; color: var(--secondary); margin-bottom: 4px; display: block;">Backend URL</label>
+        <input type="text" id="input-login-backend-url" placeholder="https://your-backend-url.com" value="http://localhost:8000" style="font-size: 14px;">
       </div>
-      <button id="btn-unlock" class="btn btn-primary" style="width: 100%;">Unlock</button>
-      <div id="auth-error">Incorrect passcode</div>
+      
+      <button id="btn-github-login" class="btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background-color: #24292e; color: white; border: none;">
+        <svg height="20" viewBox="0 0 16 16" version="1.1" width="20" aria-hidden="true" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+        Login with GitHub
+      </button>
+
+      <button id="btn-bypass-auth" class="btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background-color: transparent; border: 1px solid var(--border); color: var(--text-muted); margin-top: 12px; font-size: 12px;">
+        Bypass for Testing
+      </button>
+
+      <button id="btn-enter-dashboard" class="btn btn-primary" style="width: 100%; display: none; margin-top: 16px;">Enter Dashboard</button>
+
+      <div id="auth-error">Authentication failed</div>
     </div>
   </div>
 
@@ -539,6 +554,7 @@
         <button class="tab-btn active" data-tab="tab-connection">Connection</button>
         <button class="tab-btn" data-tab="tab-profiles">Profiles & Teams</button>
         <button class="tab-btn" data-tab="tab-brd">BRD Manager</button>
+        <button class="tab-btn" data-tab="tab-history">History</button>
       </div>
       
       <div class="glass-panel">
@@ -663,6 +679,37 @@
                 Select a profile to view active BRD.
               </div>
               <button id="btn-refresh-brd" class="btn btn-secondary" style="margin-top: 24px;">Refresh Status</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: HISTORY -->
+        <div id="tab-history" class="tab-content">
+          <h3 class="section-title">PR Analysis History</h3>
+          
+          <div class="form-group" style="width: 50%;">
+            <label>Select Profile</label>
+            <select id="hist-prof-select" class="profile-dropdown" style="background-color: rgba(255,255,255,0.6);">
+              <option value="">Load profiles first...</option>
+            </select>
+          </div>
+          
+          <div id="history-container" style="margin-top: 24px; display: flex; flex-direction: column; gap: 24px;">
+            <div id="history-present-day" class="history-group">
+              <h4 style="color: var(--foreground); margin-bottom: 12px; font-weight: 700;">Present Day</h4>
+              <div class="history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+            <div id="history-past-day" class="history-group">
+              <h4 style="color: var(--foreground); margin-bottom: 12px; font-weight: 700;">Past Day</h4>
+              <div class="history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+            <div id="history-past-week" class="history-group">
+              <h4 style="color: var(--foreground); margin-bottom: 12px; font-weight: 700;">Past Week</h4>
+              <div class="history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+            <div id="history-past-month" class="history-group">
+              <h4 style="color: var(--foreground); margin-bottom: 12px; font-weight: 700;">Past Month</h4>
+              <div class="history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
             </div>
           </div>
         </div>

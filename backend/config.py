@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     GITHUB_TOKEN: str = Field(..., description="GitHub Personal Access Token with repo scope")
     GITHUB_WEBHOOK_SECRET: str = Field("", description="Secret for validating webhook HMAC signatures")
     CHANGELOG_REPO: str = Field(..., description="Separate repository name (owner/repo) where changelog.txt is pushed")
+    GITHUB_CLIENT_ID: str = Field("", description="GitHub OAuth App Client ID")
+    GITHUB_CLIENT_SECRET: str = Field("", description="GitHub OAuth App Client Secret")
+    COMPANY_GITHUB_ORG: str = Field("", description="Authorized GitHub Organization for Extension Auto-Login")
+    HOST_URL: str = Field("http://localhost:8000", description="Backend host URL for OAuth redirects")
 
     # NVIDIA NIM configuration
     NVIDIA_NIM_API_KEY: str = Field(..., description="NVIDIA NIM API key")
@@ -30,6 +34,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field("sqlite+aiosqlite:///./data/capsule.db", description="Database connection URL")
     LOG_LEVEL: str = Field("INFO", description="Log level (DEBUG, INFO, WARNING, ERROR)")
     CLOUDFLARE_WORKER_URL: str = Field("http://localhost:8787", description="Cloudflare Worker URL for image generation and summaries")
+    GLOBAL_REDUCE_ENABLED: bool = Field(True, description="Run a holistic LLM reduce pass over merged chunks to capture cross-file relationships")
 
     model_config = SettingsConfigDict(
         env_file=".env",

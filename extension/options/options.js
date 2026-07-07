@@ -2,44 +2,124 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- AUTH LOGIC ---
   const authOverlay = document.getElementById("auth-overlay");
   const appContent = document.getElementById("app-content");
-  const btnUnlock = document.getElementById("btn-unlock");
-  const inputMasterPassword = document.getElementById("input-master-password");
+  const inputLoginBackendUrl = document.getElementById("input-login-backend-url");
+  const btnEnterDashboard = document.getElementById("btn-enter-dashboard");
   const authError = document.getElementById("auth-error");
+  const btnGithubLogin = document.getElementById("btn-github-login");
+  const btnBypassAuth = document.getElementById("btn-bypass-auth");
 
-  // Auth checks the stored API key — no hardcoded secrets.
-  // On first use, a fallback passcode "capsule-admin" is accepted
-  // so the user can reach settings to configure their real API key.
-  const checkAuth = async () => {
-    const entered = inputMasterPassword.value.trim();
-    if (!entered) return;
-
-    const { apiKey } = await chrome.storage.local.get(["apiKey"]);
-
-    // If an API key is saved, it becomes the master passcode.
-    // If none is saved yet, accept the default bootstrap password so
-    // the admin can log in and configure the key for the first time.
-    const validPasscode = apiKey || "capsule-admin";
-
-    if (entered === validPasscode) {
-      authOverlay.style.opacity = "0";
-      setTimeout(() => {
-        authOverlay.style.display = "none";
-        appContent.style.display = "flex";
-      }, 400);
-    } else {
-      authError.textContent = apiKey
-        ? "Incorrect passcode. Use your configured API Key."
-        : "Incorrect passcode. Default is 'capsule-admin'.";
-      authError.style.display = "block";
-      inputMasterPassword.value = "";
-      setTimeout(() => { authError.style.display = "none"; }, 3000);
+  // Load existing backend URL if any
+  chrome.storage.local.get(["backendUrl", "apiKey"]).then(({ backendUrl, apiKey }) => {
+    if (backendUrl) {
+      inputLoginBackendUrl.value = backendUrl;
     }
-  };
-
-  btnUnlock.addEventListener("click", checkAuth);
-  inputMasterPassword.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") checkAuth();
+    // If already authenticated, show the enter dashboard button immediately
+    if (apiKey) {
+      btnGithubLogin.style.display = "none";
+      btnEnterDashboard.style.display = "block";
+    }
   });
+
+  btnEnterDashboard.addEventListener("click", () => {
+    authOverlay.style.opacity = "0";
+    setTimeout(() => {
+      authOverlay.style.display = "none";
+      appContent.style.display = "flex";
+    }, 400);
+  });
+
+  if (btnBypassAuth) {
+    btnBypassAuth.addEventListener("click", () => {
+      const backendUrl = inputLoginBackendUrl.value.trim().replace(/\/$/, "");
+      chrome.storage.local.set({ apiKey: "dev-bypass", apiUrl: backendUrl, backendUrl: backendUrl }, () => {
+        authOverlay.style.opacity = "0";
+        setTimeout(() => {
+          authOverlay.style.display = "none";
+          appContent.style.display = "flex";
+        }, 400);
+      });
+    });
+  }
+
+  if (btnGithubLogin) {
+    btnGithubLogin.addEventListener("click", async () => {
+      btnGithubLogin.disabled = true;
+      const originalText = btnGithubLogin.innerHTML;
+      btnGithubLogin.innerHTML = 'Connecting...';
+      authError.style.display = "none";
+      
+      try {
+        const backendUrl = inputLoginBackendUrl.value.trim().replace(/\/$/, "");
+        if (!backendUrl) throw new Error("Please enter a valid Backend URL");
+        
+        await chrome.storage.local.set({ backendUrl });
+        
+        // Fetch config
+        const configRes = await fetch(`${backendUrl}/api/auth/extension/config`);
+        if (!configRes.ok) throw new Error("Failed to fetch extension config");
+        const config = await configRes.json();
+        
+        const clientId = config.github_client_id;
+        const redirectUrl = chrome.identity.getRedirectURL();
+        
+        const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUrl)}&scope=read:org`;
+        
+        chrome.identity.launchWebAuthFlow(
+          { url: authUrl, interactive: true },
+          async (redirectUri) => {
+            if (chrome.runtime.lastError || !redirectUri) {
+              btnGithubLogin.disabled = false;
+              btnGithubLogin.innerHTML = originalText;
+              authError.textContent = chrome.runtime.lastError?.message || "Auth flow cancelled";
+              authError.style.display = "block";
+              setTimeout(() => { authError.style.display = "none"; }, 5000);
+              return;
+            }
+            
+            const urlParams = new URLSearchParams(new URL(redirectUri).search);
+            const code = urlParams.get("code");
+            if (!code) {
+              throw new Error("No OAuth code received");
+            }
+            
+            btnGithubLogin.innerHTML = 'Verifying org...';
+            
+            // Send code to backend
+            try {
+              const verifyRes = await fetch(`${backendUrl}/api/auth/extension/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+              });
+              
+              const verifyData = await verifyRes.json();
+              
+              if (verifyRes.ok && verifyData.api_key) {
+                await chrome.storage.local.set({ apiKey: verifyData.api_key, apiUrl: backendUrl, backendUrl: backendUrl });
+                btnGithubLogin.style.display = "none";
+                btnEnterDashboard.style.display = "block";
+              } else {
+                throw new Error(verifyData.detail || "Verification failed");
+              }
+            } catch (err) {
+              authError.textContent = err.message || "Backend verification failed";
+              authError.style.display = "block";
+              btnGithubLogin.disabled = false;
+              btnGithubLogin.innerHTML = originalText;
+              setTimeout(() => { authError.style.display = "none"; }, 5000);
+            }
+          }
+        );
+      } catch (err) {
+        authError.textContent = err.message || "Failed to initialize auth";
+        authError.style.display = "block";
+        btnGithubLogin.disabled = false;
+        btnGithubLogin.innerHTML = originalText;
+        setTimeout(() => { authError.style.display = "none"; }, 5000);
+      }
+    });
+  }
+
 
   // --- TABS LOGIC ---
   const tabBtns = document.querySelectorAll(".tab-btn");
@@ -116,7 +196,8 @@ document.addEventListener("DOMContentLoaded", () => {
       options.body = JSON.stringify(body);
     }
 
-    const response = await fetch(`${apiUrl}${endpoint}`, options);
+    const finalEndpoint = endpoint.startsWith("/api") ? endpoint : `/api${endpoint}`;
+    const response = await fetch(`${apiUrl}${finalEndpoint}`, options);
     
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
@@ -282,6 +363,108 @@ document.addEventListener("DOMContentLoaded", () => {
       showStatus("status-brd", e.message, "error");
     }
   });
+
+  // --- HISTORY TAB LOGIC ---
+  const histProfSelect = document.getElementById("hist-prof-select");
+  
+  histProfSelect.addEventListener("change", fetchHistory);
+  
+  async function fetchHistory() {
+    const profId = histProfSelect.value;
+    if (!profId) {
+      clearHistory();
+      return;
+    }
+    
+    try {
+      const history = await apiCall(`/profiles/${profId}/pr-history`);
+      renderHistory(history);
+    } catch (e) {
+      console.error("Failed to fetch history:", e);
+    }
+  }
+  
+  function clearHistory() {
+    ["present-day", "past-day", "past-week", "past-month"].forEach(id => {
+      document.querySelector(`#history-${id} .history-list`).innerHTML = "";
+    });
+  }
+  
+  function renderHistory(items) {
+    clearHistory();
+    const now = new Date();
+    
+    const groups = {
+      presentDay: [],
+      pastDay: [],
+      pastWeek: [],
+      pastMonth: []
+    };
+    
+    items.forEach(item => {
+      // Create a clean display element
+      const el = document.createElement("div");
+      el.style.padding = "12px";
+      el.style.backgroundColor = "rgba(255, 255, 255, 0.4)";
+      el.style.borderRadius = "8px";
+      el.style.borderLeft = "4px solid var(--accent)";
+      
+      const analyzedAt = item.analyzed_at ? new Date(item.analyzed_at + "Z") : new Date(); // assuming UTC
+      const repo = item.repo;
+      const prNum = item.pr_number;
+      const branch = item.branch || "main";
+      
+      el.innerHTML = `
+        <div style="font-weight: 600; color: var(--foreground);">
+          ${repo} <span style="color: var(--accent);">#${prNum}</span> (${branch})
+        </div>
+        <div style="font-size: 0.85rem; color: #555; margin-top: 4px;">
+          ${item.title || "No Title"}
+        </div>
+        <div style="font-size: 0.75rem; color: #888; margin-top: 8px;">
+          Analyzed: ${analyzedAt.toLocaleString()}
+        </div>
+      `;
+      
+      // Calculate diff in hours
+      const diffHours = (now - analyzedAt) / (1000 * 60 * 60);
+      
+      if (diffHours < 24 && now.getDate() === analyzedAt.getDate()) {
+        groups.presentDay.push(el);
+      } else if (diffHours < 48) {
+        groups.pastDay.push(el);
+      } else if (diffHours < 24 * 7) {
+        groups.pastWeek.push(el);
+      } else {
+        groups.pastMonth.push(el);
+      }
+    });
+    
+    // Append to DOM
+    if (groups.presentDay.length) {
+      groups.presentDay.forEach(el => document.querySelector("#history-present-day .history-list").appendChild(el));
+    } else {
+      document.querySelector("#history-present-day .history-list").innerHTML = "<div style='color: #888; font-size: 0.9rem;'>No items</div>";
+    }
+    
+    if (groups.pastDay.length) {
+      groups.pastDay.forEach(el => document.querySelector("#history-past-day .history-list").appendChild(el));
+    } else {
+      document.querySelector("#history-past-day .history-list").innerHTML = "<div style='color: #888; font-size: 0.9rem;'>No items</div>";
+    }
+    
+    if (groups.pastWeek.length) {
+      groups.pastWeek.forEach(el => document.querySelector("#history-past-week .history-list").appendChild(el));
+    } else {
+      document.querySelector("#history-past-week .history-list").innerHTML = "<div style='color: #888; font-size: 0.9rem;'>No items</div>";
+    }
+    
+    if (groups.pastMonth.length) {
+      groups.pastMonth.forEach(el => document.querySelector("#history-past-month .history-list").appendChild(el));
+    } else {
+      document.querySelector("#history-past-month .history-list").innerHTML = "<div style='color: #888; font-size: 0.9rem;'>No items</div>";
+    }
+  }
 
   // --- UTILS ---
   function showStatus(elementId, msg, type) {

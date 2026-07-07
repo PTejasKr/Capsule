@@ -61,8 +61,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Settings redirect
-  btnSettings.addEventListener("click", () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL("options/options.html") });
+  btnSettings.addEventListener("click", async () => {
+    const optionsUrl = chrome.runtime.getURL("options/options.html");
+    try {
+      if (typeof chrome.runtime.openOptionsPage === "function") {
+        await chrome.runtime.openOptionsPage();
+      } else {
+        chrome.tabs.create({ url: optionsUrl });
+      }
+    } catch (err) {
+      console.error("Failed to open options page via API, falling back to tab:", err);
+      chrome.tabs.create({ url: optionsUrl });
+    }
   });
 
   btnRetry.addEventListener("click", loadPrAnalysis);
@@ -559,7 +569,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const brd = await res.json();
         if (brd && brd.content) {
           const content = brd.content;
-          const workflowSection = content.match(/(?s)workflow.*?\n\n/) || content.substring(0, 300);
+          const workflowSection = content.match(/workflow[\s\S]*?\n\n/) || content.substring(0, 300);
           wfPromptInput.value = Array.isArray(workflowSection) ? workflowSection[0].trim() : workflowSection.trim();
           brdWorkflowLoaded = true;
         }

@@ -1,5 +1,5 @@
 """
-Capsule Webhook Router — Enterprise async edition
+Capsule Webhook Router - Enterprise async edition
 --------------------------------------------------
 All heavy processing is now offloaded to Celery workers.
 GitHub webhook endpoints return 202 Accepted immediately in production.
@@ -78,7 +78,7 @@ def _get_task_info(task_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# GitHub Webhook — async (non-blocking)
+# GitHub Webhook - async (non-blocking)
 # ---------------------------------------------------------------------------
 
 @router.post("/github", status_code=200, dependencies=[Depends(verify_github_signature)])
@@ -99,7 +99,7 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
     if not repo or not pr_number:
         raise HTTPException(status_code=400, detail="Missing repository or PR number in payload")
 
-    logger.info(f"GitHub webhook received — repo={repo} PR=#{pr_number} action={action}")
+    logger.info(f"GitHub webhook received - repo={repo} PR=#{pr_number} action={action}")
 
     try:
         # Check if sandbox mock mode is active
@@ -109,7 +109,7 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
         is_mock = request.headers.get("x-sandbox-mock") == "true" or os.environ.get("SANDBOX_MOCK") == "true"
 
         if is_mock:
-            logger.info(f"SANDBOX MOCK: Processing mock GitHub webhook event — action={action}")
+            logger.info(f"SANDBOX MOCK: Processing mock GitHub webhook event - action={action}")
             if action in ["opened", "reopened", "synchronize"]:
                 from backend.models.schemas import PRSummary, ChangeItem, WorkflowImpact, ChangeType, Severity
                 mock_changes = [
@@ -202,10 +202,14 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
         if _use_sync_processing():
             logger.info("Test context detected. Running webhook processing synchronously.")
             if action in ["opened", "reopened", "synchronize"]:
+                # resolve profile token
+                row = await fetch_one("SELECT p.github_token FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE rm.source_repo = ?", (repo,))
+                gh_svc = GitHubService(token=row["github_token"]) if row and row.get("github_token") else github_service
+                
                 result = await run_pr_analysis(
                     repo,
                     pr_number,
-                    github_service=github_service,
+                    github_service=gh_svc,
                     ai_engine=ai_engine,
                     brd_manager=brd_manager,
                 )
@@ -249,18 +253,18 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
                         confidence_score=row["confidence_score"],
                     )
                     
-                    # Resolve changelog repo
-                    profile_row = await fetch_one("""
-                        SELECT p.* FROM profiles p
-                        JOIN repository_mappings rm ON p.id = rm.profile_id
-                        WHERE rm.source_repo = ?
-                    """, (repo,))
-                    changelog_repo = profile_row["changelog_repo"] if profile_row else settings.CHANGELOG_REPO
-
                     files_metadata = await github_service.get_pr_files(repo, pr_number)
-                    changelog = await changelog_service.generate_changelog(summary_obj, files_metadata)
-                    result = await changelog_service.push_changelog(changelog, changelog_repo)
-                    return {"status": "changelog_pushed", "version": changelog.version, "push_result": result}
+                    changelog_entry = await changelog_service.generate_changelog(summary_obj, files_metadata)
+                    
+                    # resolve profile token for push
+                    p_row = await fetch_one("SELECT p.github_token, p.changelog_repo FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE rm.source_repo = ?", (repo,))
+                    gh_svc = GitHubService(token=p_row["github_token"]) if p_row and p_row.get("github_token") else github_service
+                    changelog_svc = ChangelogService(gh_svc)
+                    
+                    target_repo = p_row["changelog_repo"] if p_row and p_row.get("changelog_repo") else settings.CHANGELOG_REPO
+                    
+                    push_res = await changelog_svc.push_changelog(changelog_entry, target_repo=target_repo)
+                    return {"status": "changelog_pushed", "version": changelog_entry.version, "push_result": push_res}
 
             return {"status": "ignored_action", "action": action}
         else:
@@ -287,16 +291,16 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
 
 
 # ---------------------------------------------------------------------------
-# Jenkins Webhook — async (non-blocking)
+# Jenkins Webhook - async (non-blocking)
 # ---------------------------------------------------------------------------
 
 @router.post("/jenkins", status_code=200, dependencies=[Depends(verify_api_key)])
 async def jenkins_webhook(payload: JenkinsWebhookPayload, response: Response):
     """
-    Explicit Jenkins pipeline trigger — offloads analysis to Celery workers.
+    Explicit Jenkins pipeline trigger - offloads analysis to Celery workers.
     """
     repo = getattr(payload, "repo", None) or settings.CHANGELOG_REPO
-    logger.info(f"Jenkins trigger received — repo={repo} PR=#{payload.pr_number}")
+    logger.info(f"Jenkins trigger received - repo={repo} PR=#{payload.pr_number}")
     
     if _use_sync_processing():
         logger.info("Test context detected. Running Jenkins processing synchronously.")
@@ -316,10 +320,7 @@ async def jenkins_webhook(payload: JenkinsWebhookPayload, response: Response):
 
 @router.get("/task/{task_id}")
 async def get_task_status(task_id: str, _: bool = Depends(verify_api_key)):
-    """
-    Poll the status of an enqueued Celery task.
-    Returns PENDING | STARTED | SUCCESS | FAILURE | RETRY + result/error.
-    """
+    # Poll the status of an enqueued Celery task.
     info = _get_task_info(task_id)
-    logger.debug(f"Task status poll — id={task_id} state={info['state']}")
+    logger.debug(f"Task status poll - id={task_id} state={info['state']}")
     return info

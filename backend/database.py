@@ -109,6 +109,7 @@ async def init_db():
                     title TEXT,
                     summary TEXT,
                     original_summary TEXT,
+                    brd_comparison TEXT,
                     branch TEXT,
                     approved BOOLEAN DEFAULT FALSE,
                     changes_json TEXT,
@@ -118,6 +119,10 @@ async def init_db():
                     PRIMARY KEY (pr_number, repo)
                 )
             """)
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+            except Exception:
+                pass
             
             # Create changelog_entries
             await conn.execute("""
@@ -211,6 +216,7 @@ async def init_db():
                     title TEXT,
                     summary TEXT,
                     original_summary TEXT,
+                    brd_comparison TEXT,
                     branch TEXT,
                     approved BOOLEAN DEFAULT 0,
                     changes_json TEXT,
@@ -220,6 +226,10 @@ async def init_db():
                     PRIMARY KEY (pr_number, repo)
                 )
             """)
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+            except Exception:
+                pass
             
             # Create changelog_entries
             await db.execute("""

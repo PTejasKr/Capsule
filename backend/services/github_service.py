@@ -318,3 +318,38 @@ class GitHubService:
         else:
             logger.error(f"Failed to create webhook on {repo}: {response.status_code} {response.text}")
             response.raise_for_status()
+
+    async def get_file_content(self, repo: str, path: str, branch: str = "main") -> Optional[str]:
+        """Fetches the decoded content of a file from a specific branch."""
+        url = f"{self.base_url}/repos/{repo}/contents/{path}?ref={branch}"
+        response = await self._request_with_backoff("GET", url)
+        if response.status_code == 200:
+            data = response.json()
+            content_b64 = data.get("content", "")
+            if content_b64:
+                return base64.b64decode(content_b64).decode('utf-8')
+            return ""
+        elif response.status_code == 404:
+            return None
+        else:
+            response.raise_for_status()
+            
+    async def create_pull_request(self, repo: str, title: str, head: str, base: str, body: str) -> Dict[str, Any]:
+        """Creates a pull request."""
+        logger.info(f"Creating PR on {repo} from {head} to {base}")
+        url = f"{self.base_url}/repos/{repo}/pulls"
+        payload = {
+            "title": title,
+            "head": head,
+            "base": base,
+            "body": body
+        }
+        response = await self._request_with_backoff("POST", url, json=payload)
+        if response.status_code == 201:
+            return response.json()
+        elif response.status_code == 422: # Might already exist
+            logger.info(f"PR might already exist from {head} to {base} on {repo}. {response.text}")
+            return {"status": "already_exists", "details": response.json()}
+        else:
+            logger.error(f"Failed to create PR: {response.status_code} {response.text}")
+            response.raise_for_status()

@@ -100,7 +100,7 @@ graph TD
 - Shows summaries without page reload
 - **Admin Console**: Edit generated summaries, trigger auto-repairs, compare summaries, and approve/reject directly from the UI
 
-### 🛠️ Kilo Code Multi-Agent Loop
+### 🛠️ Capsule Multi-Agent Loop
 - Multi-agent orchestration loop (`Architect`, `Coder`, and `Debugger` modes)
 - Automatic verification and self-healing loop with up to 2 code repair attempts
 - Automatic branch patching and commit pushes on successful verification
@@ -576,6 +576,16 @@ Why we don't trust AI blindly:
 8. **Changelog validation** - Makes sure generated entries match actual changes
 
 **Result**: You get AI analysis you can actually trust, not hallucinations.
+
+### Map-Reduce with a Holistic Reduce Pass
+
+Capsule analyzes large PRs in two stages so nothing gets silently dropped:
+
+1. **Map** – The unified diff is split into file-bounded chunks (`max 300 lines` each) and analyzed concurrently. This keeps any single PR within the LLM's context window.
+2. **Reduce (holistic)** – The merged per-chunk results are sent back to the LLM **once** for a global pass. This captures relationships that span chunks (renamed functions, shared helpers, cross-file workflow transitions) that per-chunk analysis alone would miss.
+3. **Critic + Cross-validate** – The reduced output is verified against the raw diff and stripped of any fabricated file references (see the 8-Layer Shield above).
+
+The holistic reduce pass is controlled by `GLOBAL_REDUCE_ENABLED` (default `true`). Set it to `false` to skip the extra LLM call and fall back to the raw merged chunks for lower latency/cost.
 
 ---
 

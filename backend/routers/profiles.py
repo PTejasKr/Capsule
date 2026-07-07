@@ -166,3 +166,33 @@ async def get_brd_history(profile_id: int):
     Returns history of all uploaded BRD versions for a profile.
     """
     return await brd_manager.get_brd_history(profile_id)
+
+@router.get("/{profile_id}/pr-history")
+async def get_pr_history(profile_id: int):
+    """
+    Returns history of all analyzed PRs for repositories mapped to this profile.
+    """
+    sql = """
+        SELECT pa.* FROM pr_analyses pa
+        JOIN repository_mappings rm ON pa.repo = rm.source_repo
+        WHERE rm.profile_id = ?
+        ORDER BY pa.analyzed_at DESC
+    """
+    rows = await fetch_all(sql, (profile_id,))
+    
+    # Avoid circular dependency by importing _reconstruct_summary_from_row locally if needed,
+    # or just return the dict representations if the client doesn't need full reconstruction.
+    from backend.routers.api import _reconstruct_summary_from_row
+    
+    summaries = []
+    for r in rows:
+        try:
+            summary = await _reconstruct_summary_from_row(r)
+            # add analyzed_at to summary if not present in schema
+            sum_dict = summary.model_dump()
+            sum_dict["analyzed_at"] = r.get("analyzed_at")
+            summaries.append(sum_dict)
+        except Exception as e:
+            logger.error(f"Error reconstructing PR summary for history: {e}")
+            
+    return summaries

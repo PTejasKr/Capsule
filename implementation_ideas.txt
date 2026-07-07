@@ -114,7 +114,7 @@ Key endpoints:
   GET  /api/pr/{num}/compare      - Perform AI difference analysis between original/edited summaries
   GET  /api/pr/pending            - Retrieves unapproved/pending PRs across repositories
   POST /api/pr/{num}/reject       - Rejects and removes a PR from the pending queue
-  POST /api/pr/{num}/auto-repair  - Triggers the Kilo Code multi-agent auto-repair loop
+  POST /api/pr/{num}/auto-repair  - Triggers the Capsule multi-agent auto-repair loop
 
 Database tables (SQLite):
   - brd_versions      : Version history of BRD documents

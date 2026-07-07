@@ -63,6 +63,11 @@ class ChangelogService:
         """
         text = f"## [{entry.version}] - {entry.date}\n"
         
+        if entry.brd_comparison:
+            text += "### BRD Comparison\n"
+            text += f"{entry.brd_comparison}\n\n"
+        
+        
         text += "### Technical Changes\n"
         if entry.technical_changes:
             for change in entry.technical_changes:
@@ -119,7 +124,8 @@ class ChangelogService:
             workflow_changes=workflow_changes,
             lines_added=additions,
             lines_deleted=deletions,
-            pr_number=pr_summary.pr_number
+            pr_number=pr_summary.pr_number,
+            brd_comparison=pr_summary.brd_comparison
         )
 
     async def push_changelog(self, entry: ChangelogEntry, target_repo: str = None) -> Dict[str, Any]:
@@ -226,6 +232,8 @@ class ChangelogService:
                 summary_md += "- No workflow changes detected.\n"
             if image_bytes:
                 summary_md += f"\n## Workflow Diagram\n![Workflow Diagram](../diagrams/pr_{entry.pr_number}.png)\n"
+            if entry.brd_comparison:
+                summary_md += f"\n## BRD Comparison\n{entry.brd_comparison}\n"
 
             summary_path = f"summaries/pr_{entry.pr_number}.md"
             summary_commit = f"docs(changelog): upload summary markdown for PR #{entry.pr_number}"
@@ -251,4 +259,19 @@ class ChangelogService:
         }
         await insert("changelog_entries", db_data)
         
-        return result
+        # 6. Create PR from changelog to main
+        try:
+            pr_title = f"chore(release): Update Changelog for v{entry.version}"
+            pr_body = f"This PR was auto-generated to append the latest AI summaries and BRD comparisons for version {entry.version}."
+            pr_res = await self.github_service.create_pull_request(
+                target_repo,
+                title=pr_title,
+                head="changelog",
+                base="main",
+                body=pr_body
+            )
+            logger.info(f"Opened PR from changelog to main: {pr_res.get('html_url')}")
+        except Exception as e:
+            logger.error(f"Failed to create PR from changelog to main: {e}")
+
+        return {"status": "success", "file": path, "commit": result.get("sha")}

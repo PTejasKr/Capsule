@@ -54,7 +54,6 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
     from backend.database import insert, fetch_one
     from backend.middleware.security import sanitize_text
 
-    github_service = GitHubService()
     ai_engine = AIEngine()
     brd_manager = BRDManager()
 
@@ -71,6 +70,7 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
             "changelog_repo": row["changelog_repo"],
             "ai_model": row["ai_model"],
             "brd_content": row["brd_content"],
+            "github_token": row["github_token"],
         }
     else:
         raise ValueError(f"Repository {repo} is not mapped to any profile. Cannot proceed.")
@@ -78,6 +78,8 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
     brd = profile["brd_content"] or await brd_manager.load_brd(profile["id"])
     if not brd:
         raise ValueError(f"BRD missing for profile {profile['id']}. Upload a BRD before triggering analysis.")
+
+    github_service = GitHubService(token=profile.get("github_token"))
 
     # --- fetch from GitHub ---
     pr_details = await github_service.get_pr_details(repo, pr_number)
@@ -102,6 +104,8 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
         "repo":                 repo,
         "title":                summary.title,
         "summary":              summary.summary,
+        "original_summary":     summary.summary,
+        "brd_comparison":       summary.brd_comparison,
         "branch":               pr_details.get("head_ref", "") or summary.branch,
         "approved":             False,
         "changes_json":         json.dumps([c.model_dump() for c in summary.changes]),

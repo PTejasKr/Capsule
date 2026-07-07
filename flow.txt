@@ -30,7 +30,7 @@ flowchart TB
         Worker -->|5a. Fetch Title/Diff/Files| GitHub_API[GitHub REST API]
         Worker -->|5b. Ground Rules| BRD_Mgr[BRD Manager & Cache]
         Worker -->|5c. Analyze Code| NVIDIA_NIM[NVIDIA NIM Meta Llama 3.3 70B / OpenRouter]
-        Worker -->|5d. Kilo Code Multi-Agent Loop| KC[Architect / Coder / Debugger]
+        Worker -->|5d. Capsule Multi-Agent Loop| KC[Architect / Coder / Debugger]
         KC -->|Commit Auto-Repair| GitHub_API
         Worker -->|6. Save Analysis| SQLite_PG[(Supabase PostgreSQL / SQLite Database)]
     end
@@ -70,7 +70,7 @@ flowchart TB
 4. **Admin Actions**:
    - **Save Edit**: The admin can manually correct/edit the generated summary in the extension dashboard. Saving it posts to `/api/pr/{pr_number}/repair` which updates the database.
    - **Compare**: The admin can click "Compare" to trigger `/api/pr/{pr_number}/compare`, which uses OpenRouter to perform an AI difference comparison between the original summary and their edits, recommending actions.
-   - **Auto-Repair Code**: If issues are found, the admin can trigger `/api/pr/{pr_number}/auto-repair`. This initiates the Kilo Code multi-agent loop (Architect-Coder-Debugger) to write, statically verify, and push a code fix directly to the PR branch via GitHub API, resolving bugs automatically.
+   - **Auto-Repair Code**: If issues are found, the admin can trigger `/api/pr/{pr_number}/auto-repair`. This initiates the Capsule multi-agent loop (Architect-Coder-Debugger) to write, statically verify, and push a code fix directly to the PR branch via GitHub API, resolving bugs automatically.
    - **Reject / Remove**: The admin can reject the PR, removing it from the pending list and database (`POST /api/pr/{pr_number}/reject`).
 5. **Approval**: If satisfied, the admin clicks **Approve & Push** (or calls `POST /api/pr/{pr_number}/approve`). This:
    - Updates `approved = True` in the database.

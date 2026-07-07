@@ -108,7 +108,7 @@ class AIEngine:
         """
         Builds the grounded system prompt with BRD context and anti-hallucination guidelines.
         """
-        return f"""You are Antigravity Capsule, an elite code change analysis AI. Your job is to analyze code diffs against a Business Requirement Document (BRD) and output a structured analysis.
+        return f"""You are Capsule, an elite code change analysis AI. Your job is to analyze code diffs against a Business Requirement Document (BRD) and output a structured analysis.
 
 === CRITICAL ANTI-HALLUCINATION INSTRUCTIONS ===
 1. ONLY list file paths, line numbers, or code changes that exist inside the provided Pull Request Diff.
@@ -124,6 +124,7 @@ class AIEngine:
 You MUST output your response as a valid JSON object matching this schema:
 {{
   "summary": "High-level summary of the overall changes and workflow impact",
+  "brd_comparison": "Detailed comparison and direct analysis of how the changes map to the initial BRD.",
   "changes": [
     {{
       "file": "path/to/file.py",
@@ -175,6 +176,46 @@ You MUST output your response as a valid JSON object matching this schema:
             temperature=0.1,
             response_format={"type": "json_object"},
             max_tokens=2000
+        )
+        return json.loads(content)
+
+    async def _reduce_overall(self, combined: Dict[str, Any], brd_content: str, model: str = None) -> Dict[str, Any]:
+        """Holistic reduce pass: re-send the merged per-chunk results to the LLM so
+        cross-file / cross-chunk relationships (renames, shared helpers, workflow
+        transitions) are captured in the final summary instead of being lost per chunk."""
+        system_prompt = (
+            "You are a senior engineer performing a holistic review of a Pull Request. "
+            "You are given the merged analysis produced from individual diff chunks. "
+            "Your job is to produce a coherent, de-duplicated overall analysis that "
+            "captures relationships and impacts that span multiple files.\n\n"
+            "=== CRITICAL ANTI-HALLUCINATION INSTRUCTIONS ===\n"
+            "1. ONLY keep file paths, line numbers, or code changes that already appear "
+            "in the provided merged analysis. NEVER invent new files or changes.\n"
+            "2. Consolidate duplicate changes that reference the same file or logic.\n"
+            "3. Write a single high-level summary that reflects the PR as a whole, "
+            "including cross-file workflow impact.\n\n"
+            "=== BUSINESS REQUIREMENT DOCUMENT (BRD) ===\n"
+            f"{brd_content}\n"
+            "=== END OF BRD ===\n\n"
+            "You MUST output your response as a valid JSON object matching this schema:\n"
+            "{\n"
+            '  "summary": "High-level summary of the overall changes and workflow impact",\n'
+            '  "changes": [ { "file": "path/to/file.py", "line_range": "12-25", "change_type": "added|modified|deleted", "description": "...", "confidence": 0.95 } ],\n'
+            '  "workflow_impact": { "has_impact": true|false, "severity": "none|minor|major", "impact_description": "...", "affected_workflows": ["..."], "before_state": "...", "after_state": "..." },\n'
+            '  "confidence_score": 0.98\n'
+            "}\n"
+        )
+        user_prompt = f"Merged per-chunk analysis:\n{json.dumps(combined, indent=2)}"
+
+        content = await self._chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.1,
+            response_format={"type": "json_object"},
+            max_tokens=2000,
+            specific_provider=model,
         )
         return json.loads(content)
 
@@ -267,6 +308,14 @@ You MUST output your response as a valid JSON object matching this schema:
         if scores:
             combined["confidence_score"] = round(sum(scores) / len(scores), 2)
 
+        # Holistic reduce pass: capture cross-chunk relationships lost during map phase.
+        # Skipped when GLOBAL_REDUCE_ENABLED is false (falls back to merged chunks).
+        if getattr(settings, "GLOBAL_REDUCE_ENABLED", True):
+            try:
+                combined = await self._reduce_overall(combined, brd_content, target_model)
+            except Exception as e:
+                logger.warning(f"Global reduce pass failed, falling back to merged chunks: {e}")
+
         # Critic loop to ensure no hallucinations
         critic_output = await self._critic_review(combined, diff, target_model)
         actual_files = self._parse_diff_files(diff)
@@ -312,9 +361,9 @@ You MUST output your response as a valid JSON object matching this schema:
         """
         Architect Mode: Analyzes the PR summary and file diffs to generate a structured execution plan.
         """
-        logger.info("[Kilo Code] Orchestrator invoking Architect Mode")
+        logger.info("[Capsule] Orchestrator invoking Architect Mode")
         system_prompt = (
-            "You are the Architect Mode agent in the Kilo Code orchestration loop. "
+            "You are the Architect Mode agent in the Capsule orchestration loop. "
             "Your job is to analyze the PR summary and the provided file contents, and create a structured execution plan. "
             "You must map out what needs to change in which files, identify dependencies, and detail the specific logic to be altered. "
             "Output your response as a valid JSON object with keys: 'execution_plan' (a step-by-step list of instructions), 'target_files' (list of file paths to modify), and 'architectural_notes'."
@@ -341,9 +390,9 @@ You MUST output your response as a valid JSON object matching this schema:
         """
         Coder Mode: Implements the code changes based on the Architect's plan and any Debugger feedback.
         """
-        logger.info("[Kilo Code] Orchestrator invoking Coder Mode")
+        logger.info("[Capsule] Orchestrator invoking Coder Mode")
         system_prompt = (
-            "You are the Coder Mode agent in the Kilo Code orchestration loop. "
+            "You are the Coder Mode agent in the Capsule orchestration loop. "
             "Your job is to write the actual code modifications based on the Architect's execution plan. "
             "Output a JSON object with a 'files' array containing the full 'path' and 'new_content' (the complete, fixed file content), and a 'message' string for the commit."
         )
@@ -373,9 +422,9 @@ You MUST output your response as a valid JSON object matching this schema:
         """
         Debugger Mode: Statically verifies the generated code against the Architect's plan.
         """
-        logger.info("[Kilo Code] Orchestrator invoking Debugger Mode")
+        logger.info("[Capsule] Orchestrator invoking Debugger Mode")
         system_prompt = (
-            "You are the Debugger Mode agent in the Kilo Code orchestration loop. "
+            "You are the Debugger Mode agent in the Capsule orchestration loop. "
             "Your job is to statically verify the code generated by the Coder Mode agent against the Architect's execution plan. "
             "Ensure the Coder followed all instructions, didn't introduce syntax errors, and solved the original issue. "
             "Output a JSON object with keys: 'is_valid' (boolean), 'feedback' (string detailing any issues found, or empty if valid)."
@@ -397,11 +446,11 @@ You MUST output your response as a valid JSON object matching this schema:
 
     async def auto_repair_code(self, summary: str, files_metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        The Agentic Execution Loop (Kilo Code Architecture).
+        The Agentic Execution Loop (Capsule Architecture).
         Takes the AI analysis summary and the PR diff files, uses a multi-agent orchestration loop
         to plan, code, and verify the replacement contents for the files that need fixing.
         """
-        logger.info("[Kilo Code] Starting Agentic Execution Loop for Auto-Repair")
+        logger.info("[Capsule] Starting Agentic Execution Loop for Auto-Repair")
         
         # 1. Context Gathering & Task Planning (Architect Mode)
         architect_plan = await self._architect_mode(summary, files_metadata)
@@ -419,16 +468,16 @@ You MUST output your response as a valid JSON object matching this schema:
             verification = await self._debugger_mode(generated_code, architect_plan)
             
             if verification.get("is_valid", False):
-                logger.info("[Kilo Code] Debugger Mode verified code successfully.")
+                logger.info("[Capsule] Debugger Mode verified code successfully.")
                 final_code = generated_code
                 break
             else:
                 feedback = verification.get("feedback", "Unknown error in code generation.")
-                logger.warning(f"[Kilo Code] Debugger Mode found issues: {feedback}. Retrying... ({attempt+1}/{max_retries})")
+                logger.warning(f"[Capsule] Debugger Mode found issues: {feedback}. Retrying... ({attempt+1}/{max_retries})")
                 attempt += 1
                 
         if not final_code:
-            logger.error("[Kilo Code] Execution loop exhausted retries. Returning last generated code with warnings.")
+            logger.error("[Capsule] Execution loop exhausted retries. Returning last generated code with warnings.")
             final_code = generated_code # Return the last attempt even if flawed
             final_code["message"] = "[WARNING: Verification Failed] " + final_code.get("message", "Auto-Repair")
             

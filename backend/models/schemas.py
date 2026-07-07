@@ -34,6 +34,7 @@ class PRSummary(BaseModel):
     branch: Optional[str] = Field(None, description="The branch name the PR targets")
     title: str = Field(..., description="The title of the pull request")
     summary: str = Field(..., description="High-level, human-readable summary of the changes")
+    brd_comparison: str = Field("", description="Detailed comparison between the changes and the initial BRD")
     changes: List[ChangeItem] = Field(..., description="List of specific technical changes")
     workflow_impact: WorkflowImpact = Field(..., description="Analysis of changes against the BRD workflows")
     confidence_score: float = Field(..., description="Overall confidence score of the analysis")
@@ -42,6 +43,7 @@ class PRSummary(BaseModel):
 class ChangelogEntry(BaseModel):
     version: str = Field(..., description="Semantic version string, e.g., 'v1.0.1'")
     date: str = Field(..., description="ISO date of the entry, e.g., '2026-06-17'")
+    brd_comparison: str = Field("", description="BRD comparison notes")
     technical_changes: List[str] = Field(..., description="Technical summary lines detailing file and line changes")
     workflow_changes: List[str] = Field(..., description="Workflow change lines explaining flow differences")
     lines_added: int = Field(0, description="Total number of lines added")
