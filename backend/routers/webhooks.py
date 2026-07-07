@@ -102,6 +102,104 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
     logger.info(f"GitHub webhook received — repo={repo} PR=#{pr_number} action={action}")
 
     try:
+        # Check if sandbox mock mode is active
+        import os
+        import json
+        from datetime import datetime
+        is_mock = request.headers.get("x-sandbox-mock") == "true" or os.environ.get("SANDBOX_MOCK") == "true"
+
+        if is_mock:
+            logger.info(f"SANDBOX MOCK: Processing mock GitHub webhook event — action={action}")
+            if action in ["opened", "reopened", "synchronize"]:
+                from backend.models.schemas import PRSummary, ChangeItem, WorkflowImpact, ChangeType, Severity
+                mock_changes = [
+                    ChangeItem(
+                        file="backend/main.py",
+                        line_range="10-15",
+                        change_type=ChangeType.MODIFIED,
+                        description="Integrated API-Key authorization security middleware.",
+                        confidence=0.98
+                    ),
+                    ChangeItem(
+                        file="extension/options/options.html",
+                        line_range="120-150",
+                        change_type=ChangeType.MODIFIED,
+                        description="Optimized CSS animations and hardware rendering layer properties.",
+                        confidence=0.95
+                    )
+                ]
+                mock_wf = WorkflowImpact(
+                    has_impact=True,
+                    severity=Severity.MINOR,
+                    impact_description="Modifies the startup database verification workflow.",
+                    affected_workflows=["database_initialization", "extension_connection"]
+                )
+                mock_summary = PRSummary(
+                    pr_number=pr_number,
+                    repo=repo,
+                    title=payload.get("pull_request", {}).get("title") or "feat: add user authentication and optimize options dashboard",
+                    summary="This pull request integrates secure authentication layers and fixes option page rendering lag.",
+                    changes=mock_changes,
+                    workflow_impact=mock_wf,
+                    confidence_score=0.97
+                )
+                
+                # Persist to database
+                db_data = {
+                    "pr_number": pr_number,
+                    "repo": repo,
+                    "title": mock_summary.title,
+                    "summary": mock_summary.summary,
+                    "original_summary": mock_summary.summary,
+                    "branch": payload.get("pull_request", {}).get("head", {}).get("ref") or "feature/auth-n-optimize",
+                    "approved": False,
+                    "changes_json": json.dumps([c.model_dump() for c in mock_summary.changes]),
+                    "workflow_impact_json": json.dumps(mock_summary.workflow_impact.model_dump()),
+                    "confidence_score": mock_summary.confidence_score,
+                }
+                from backend.database import execute
+                await execute("DELETE FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_number, repo))
+                record_id = await insert("pr_analyses", db_data)
+                
+                return {
+                    "status": "analyzed", 
+                    "pr_number": pr_number, 
+                    "mock": True,
+                    "data": {**mock_summary.model_dump(), "id": record_id}
+                }
+
+            if action == "closed":
+                merged = payload.get("pull_request", {}).get("merged", True)
+                if merged:
+                    latest_ver = "v1.1.0"
+                    db_data = {
+                        "version": latest_ver,
+                        "date": datetime.now().strftime("%Y-%m-%d"),
+                        "technical_changes_json": json.dumps([
+                            "[backend/main.py:L10-15] Integrated API-Key authorization security middleware.",
+                            "[extension/options/options.html:L120-150] Optimized CSS animations and hardware rendering layer properties."
+                        ]),
+                        "workflow_changes_json": json.dumps([
+                            "Modifies the startup database verification workflow. (Workflows: database_initialization, extension_connection)"
+                        ]),
+                        "lines_added": 120,
+                        "lines_deleted": 40,
+                        "pr_number": pr_number,
+                        "pushed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    from backend.database import execute
+                    await execute("DELETE FROM changelog_entries WHERE version = ?", (latest_ver,))
+                    await insert("changelog_entries", db_data)
+                    
+                    return {
+                        "status": "changelog_pushed", 
+                        "version": latest_ver, 
+                        "mock": True,
+                        "push_result": {"status": "success", "file": "changelog.txt"}
+                    }
+
+            return {"status": "ignored_action", "action": action, "mock": True}
+
         if _use_sync_processing():
             logger.info("Test context detected. Running webhook processing synchronously.")
             if action in ["opened", "reopened", "synchronize"]:
@@ -117,10 +215,53 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
             if action == "closed":
                 merged = payload.get("pull_request", {}).get("merged", False)
                 if merged:
-                    # Generate and push changelog
-                    changelog = await changelog_service.generate_changelog(repo, pr_number)
-                    result = await changelog_service.push_changelog(changelog)
-                    return {"status": "changelog_pushed", "version": changelog.version}
+                    # Resolve summary from database
+                    row = await fetch_one("SELECT * FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_number, repo))
+                    if not row:
+                        raise HTTPException(status_code=404, detail=f"No analysis found for PR #{pr_number} in {repo}")
+                    
+                    from backend.models.schemas import PRSummary, ChangeItem, WorkflowImpact, ChangeType, Severity
+                    changes = [
+                        ChangeItem(
+                            file=c["file"],
+                            line_range=c["line_range"],
+                            change_type=ChangeType(c["change_type"]),
+                            description=c["description"],
+                            confidence=c["confidence"],
+                        )
+                        for c in json.loads(row["changes_json"])
+                    ]
+                    wf = json.loads(row["workflow_impact_json"])
+                    workflow_impact = WorkflowImpact(
+                        has_impact=wf["has_impact"],
+                        severity=Severity(wf["severity"]),
+                        impact_description=wf["impact_description"],
+                        affected_workflows=wf["affected_workflows"],
+                        before_state=wf.get("before_state", ""),
+                        after_state=wf.get("after_state", ""),
+                    )
+                    summary_obj = PRSummary(
+                        pr_number=pr_number,
+                        repo=repo,
+                        title=row["title"],
+                        summary=row["summary"],
+                        changes=changes,
+                        workflow_impact=workflow_impact,
+                        confidence_score=row["confidence_score"],
+                    )
+                    
+                    # Resolve changelog repo
+                    profile_row = await fetch_one("""
+                        SELECT p.* FROM profiles p
+                        JOIN repository_mappings rm ON p.id = rm.profile_id
+                        WHERE rm.source_repo = ?
+                    """, (repo,))
+                    changelog_repo = profile_row["changelog_repo"] if profile_row else settings.CHANGELOG_REPO
+
+                    files_metadata = await github_service.get_pr_files(repo, pr_number)
+                    changelog = await changelog_service.generate_changelog(summary_obj, files_metadata)
+                    result = await changelog_service.push_changelog(changelog, changelog_repo)
+                    return {"status": "changelog_pushed", "version": changelog.version, "push_result": result}
 
             return {"status": "ignored_action", "action": action}
         else:

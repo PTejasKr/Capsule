@@ -1,0 +1,36 @@
+# Ignore Virtual Environment
+venv/
+.venv/
+ENV/
+env/
+
+# Ignore local databases and sqlite files
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Ignore test caches and agents
+.pytest_cache/
+.agents/
+.git/
+.github/
+
+# Ignore other sub-projects not deployed to this Vercel function
+extension/
+cloudflare-worker/
+jenkins/
+nginx/
+
+# Ignore documentation, templates, and config files
+Dockerfile
+docker-compose.yml
+README.md
+flow.txt
+implementation_ideas.txt
+locustfile.py
+resize_icons.py
+
+# Ignore logs
+*.log
+logs/

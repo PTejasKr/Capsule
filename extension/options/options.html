@@ -61,8 +61,8 @@
     .footer-aurora {
       background: radial-gradient(
         circle at 50% 50%, 
-        color-mix(in oklch, var(--accent) 30%, transparent) 0%, 
-        rgba(255, 216, 190, 0.5) 40%, 
+        color-mix(in oklch, var(--accent) 25%, transparent) 0%, 
+        rgba(255, 216, 190, 0.4) 40%, 
         transparent 70%
       );
       position: fixed;
@@ -70,10 +70,11 @@
       top: 50%;
       width: 80vw;
       height: 60vh;
-      transform: translate(-50%, -50%);
+      transform: translate3d(-50%, -50%, 0);
       border-radius: 50%;
       filter: blur(80px);
-      animation: footer-breathe 8s ease-in-out infinite alternate;
+      will-change: transform, opacity;
+      animation: footer-breathe 16s ease-in-out infinite alternate;
       pointer-events: none;
       z-index: 0;
     }
@@ -83,8 +84,8 @@
       inset: 0;
       background-size: 60px 60px;
       background-image: 
-        linear-gradient(to right, rgba(0,0,0,0.06) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px);
+        linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px);
       -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
       pointer-events: none;
       z-index: 0;
@@ -94,15 +95,12 @@
       position: fixed;
       bottom: -5vh;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate3d(-50%, 0, 0);
       font-size: 26vw;
       line-height: 0.75;
       font-weight: 900;
       letter-spacing: -0.05em;
-      color: transparent;
-      -webkit-text-stroke: 1px rgba(0,0,0,0.05);
-      background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, transparent 60%);
-      -webkit-background-clip: text;
+      color: rgba(0, 0, 0, 0.015); /* Replaced heavy webkit-stroke/background-clip with solid low opacity */
       pointer-events: none;
       user-select: none;
       z-index: 0;
@@ -120,13 +118,15 @@
       border-bottom: 1px solid rgba(255,255,255,0.2);
       padding: 12px 0;
       z-index: 10;
-      box-shadow: 0 10px 30px rgba(217, 95, 2, 0.2);
+      box-shadow: 0 10px 30px rgba(217, 95, 2, 0.15);
     }
 
     .marquee-content {
       display: flex;
       width: 200%;
-      animation: marquee 20s linear infinite;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
+      animation: marquee 25s linear infinite;
     }
 
     .marquee-item {

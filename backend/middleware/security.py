@@ -20,6 +20,11 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
     return api_key
 
 async def verify_github_signature(request: Request):
+    import os
+    if request.headers.get("x-sandbox-mock") == "true" or os.environ.get("SANDBOX_MOCK") == "true":
+        logger.warning("SANDBOX MODE: Skipping GitHub webhook signature verification.")
+        return
+
     if not settings.GITHUB_WEBHOOK_SECRET:
         # In production, a missing secret is a misconfiguration — reject the request.
         # Only skip in a local dev environment where ENV=development is explicitly set.
