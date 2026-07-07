@@ -11,7 +11,7 @@ from backend.database import fetch_one, insert
 from backend.models.schemas import PRSummary, WorkflowImpact, ChangelogEntry, BRDUploadResponse, BRDHistoryItem, ChangeItem, Severity, ChangeType, RepoSetupRequest
 
 logger = logging.getLogger("capsule.api")
-router = APIRouter(prefix="/api", tags=["api"])
+router = APIRouter(tags=["api"])
 
 # Initialize services
 github_service = GitHubService()
@@ -179,7 +179,7 @@ async def generate_and_push_changelog(pr_number: int, repo: Optional[str] = None
     files_metadata = await github_service.get_pr_files(repo, pr_number)
     
     entry = await changelog_service.generate_changelog(pr_summary, files_metadata)
-    push_res = await changelog_service.push_changelog(entry)
+    push_res = await changelog_service.push_changelog(entry, repo)
     
     return {
         "status": "success",

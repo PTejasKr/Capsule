@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (brdWorkflowLoaded) return;
     const wfPromptInput = document.getElementById("wf-prompt-input");
     try {
-      const res = await fetchWithAuth(`/api/brd/current`);
+      const res = await fetchWithAuth(`/api/profiles/1/brd/current`);
       if (res.ok) {
         const brd = await res.json();
         if (brd && brd.content) {
