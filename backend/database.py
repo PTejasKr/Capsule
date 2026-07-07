@@ -17,12 +17,16 @@ def get_db_path() -> str:
     elif url.startswith("sqlite:///"):
         path = url.replace("sqlite:///", "")
     else:
-        path = "./data/capsule.db"
+        # PostgreSQL doesn't need a local DB directory created
+        return ""
     
-    # Ensure directory exists
+    # Ensure directory exists for SQLite
     dir_name = os.path.dirname(path)
     if dir_name and not os.path.exists(dir_name):
-        os.makedirs(dir_name, exist_ok=True)
+        try:
+            os.makedirs(dir_name, exist_ok=True)
+        except Exception as e:
+            logger.warning(f"Could not create database directory: {e}")
     return path
 
 DB_PATH = get_db_path()
