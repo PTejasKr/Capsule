@@ -31,12 +31,13 @@ pipeline {
                 echo "Triggering Capsule AI analysis for PR #${env.CHANGE_ID}..."
                 script {
                     def response = httpRequest(
-                        url: "${env.CAPSULE_API_URL}/webhooks/jenkins",
+                        url: "${env.CAPSULE_API_URL}/api/webhooks/jenkins",
                         httpMode: 'POST',
                         contentType: 'APPLICATION_JSON',
                         requestBody: """{
                             \"pr_number\": ${env.CHANGE_ID},
-                            \"action\": \"${env.CHANGE_TARGET}\"
+                            \"action\": \"${env.CHANGE_TARGET}\",
+                            \"repo\": \"PTejasKr/OS-Tracker\"
                         }""",
                         customHeaders: [
                             [name: 'X-API-Key', value: env.CAPSULE_API_KEY]

@@ -174,7 +174,7 @@ async def get_pr_history(profile_id: int):
     """
     sql = """
         SELECT pa.* FROM pr_analyses pa
-        JOIN repository_mappings rm ON pa.repo = rm.source_repo
+        JOIN repository_mappings rm ON pa.repo LIKE rm.source_repo || '%'
         WHERE rm.profile_id = ?
         ORDER BY pa.analyzed_at DESC
     """

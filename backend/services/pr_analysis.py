@@ -51,8 +51,8 @@ async def run_pr_analysis(
     if branch_name is None:
         branch_name = pr_details.get("head_ref", "")
 
-    # Load the latest Business Requirements Document (BRD) content.
-    brd_content = await brd_mngr.load_brd()
+    # Load the latest Business Requirements Document (BRD) content for default profile 1
+    brd_content = await brd_mngr.load_brd(1)
 
     # Perform the analysis using the AI engine.
     summary: PRSummary = await ai.analyze_pr(

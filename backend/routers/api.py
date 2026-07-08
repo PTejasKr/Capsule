@@ -379,3 +379,27 @@ async def setup_repository(request: RepoSetupRequest):
         "changelog_branch": "configured",
         "webhook": hook_res
     }
+
+@router.post("/workflow/diagram", dependencies=[Depends(verify_api_key)])
+async def generate_workflow_diagram(payload: dict):
+    """
+    Generates a workflow diagram image from text description.
+    Uses the free AI models via the routing service to produce Mermaid.js code,
+    then returns a QuickChart.io rendered image URL.
+    """
+    import urllib.parse
+    workflow_text = payload.get("workflow_text", "")
+    if not workflow_text:
+        raise HTTPException(status_code=400, detail="workflow_text is required")
+
+    try:
+        mermaid_code = await ai_engine.generate_mermaid(workflow_text)
+        encoded = urllib.parse.quote(mermaid_code)
+        image_url = f"https://quickchart.io/chart?c=%7Btype:%27mermaid%27%7D&bkg=white&width=800&height=600&chart={encoded}"
+        return {"image_url": image_url, "mermaid_code": mermaid_code}
+    except Exception as e:
+        logger.error(f"Failed to generate workflow diagram: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate workflow diagram: {str(e)}"
+        )

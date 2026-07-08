@@ -64,7 +64,7 @@ To connect GitHub events to Jenkins:
 1. Create a new branch in your GitHub repository.
 2. Commit some modifications and open a **Pull Request** against `main`.
 3. Verify that your Jenkins pipeline gets triggered automatically.
-4. The pipeline will invoke the `/webhooks/jenkins` endpoint, completing the `Analyze Pull Request` stage.
+4. The pipeline will invoke the `/api/webhooks/jenkins` endpoint, completing the `Analyze Pull Request` stage.
 5. In GitHub, check the side-panel Capsule widget or click the extension popup to view the summary.
 6. Now, **Merge** the Pull Request.
 7. Jenkins will execute the pipeline again. Since the PR is merged, it runs the `Publish Release Changelog` stage, prepending the release notes to `changelog.txt` in the release repository.

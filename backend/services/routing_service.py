@@ -29,7 +29,7 @@ class MultiProviderRouter:
                     base_url="https://api.groq.com/openai/v1",
                     api_key=settings.GROQ_API_KEY
                 ),
-                "model": "llama-3.1-70b-versatile"
+                "model": "llama-3.3-70b-versatile"
             })
             
         # 3. NVIDIA NIM Free Tier

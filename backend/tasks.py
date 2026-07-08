@@ -61,7 +61,7 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
     row = await fetch_one("""
         SELECT p.* FROM profiles p
         JOIN repository_mappings rm ON p.id = rm.profile_id
-        WHERE rm.source_repo = ?
+        WHERE ? LIKE rm.source_repo || '%'
     """, (repo,))
 
     if row:
@@ -167,7 +167,7 @@ async def _core_changelog(repo: str, pr_number: int) -> dict:
     profile_row = await fetch_one("""
         SELECT p.* FROM profiles p
         JOIN repository_mappings rm ON p.id = rm.profile_id
-        WHERE rm.source_repo = ?
+        WHERE ? LIKE rm.source_repo || '%'
     """, (repo,))
     changelog_repo = (profile_row["changelog_repo"] if profile_row
                       else settings.CHANGELOG_REPO)

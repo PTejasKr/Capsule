@@ -1,5 +1,5 @@
 // Default configurations
-const DEFAULT_API_URL = "http://localhost:8000";
+const DEFAULT_API_URL = "http://localhost:8089";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Message listener
@@ -36,11 +36,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Helper to retrieve saved settings from storage
 async function getSettings() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["apiUrl", "apiKey", "cfWorkerUrl"], (items) => {
+    chrome.storage.local.get(["apiUrl", "apiKey"], (items) => {
       resolve({
         apiUrl: items.apiUrl || DEFAULT_API_URL,
-        apiKey: items.apiKey || "",
-        cfWorkerUrl: items.cfWorkerUrl || "http://localhost:8787"
+        apiKey: items.apiKey || "dev-bypass"
       });
     });
   });
@@ -171,8 +170,8 @@ async function handleFetchWeeklyChanges() {
     throw new Error("Missing API Key. Open Extension Options to configure.");
   }
 
-  const url = `${settings.cfWorkerUrl}/api/changes/weekly`;
-  console.log("Fetching weekly changes from Cloudflare Worker:", url);
+  const url = `${settings.apiUrl}/api/changes/weekly`;
+  console.log("Fetching weekly changes from backend:", url);
   
   const res = await fetch(url, {
     method: "GET",
@@ -196,29 +195,29 @@ async function handleFetchWeeklyChanges() {
 
 async function handleGenerateWorkflowImage(workflowText) {
   const settings = await getSettings();
-  const url = `${settings.cfWorkerUrl}/api/regenerate-workflow-image`;
-  console.log("Generating workflow image from Cloudflare Worker:", url);
+  if (!settings.apiKey) {
+    throw new Error("Missing API Key. Open Extension Options to configure.");
+  }
+
+  const url = `${settings.apiUrl}/api/workflow/diagram`;
+  console.log("Generating workflow diagram from backend:", url);
   
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-API-Key": settings.apiKey
     },
     body: JSON.stringify({ workflow_text: workflowText })
   });
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Image generator returned error (${res.status}): ${errorText || res.statusText}`);
+    throw new Error(`Diagram generator returned error (${res.status}): ${errorText || res.statusText}`);
   }
 
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+  const data = await res.json();
+  return data.image_url;
 }
 
 // Helper to update Extension Badge Color based on workflow change severity

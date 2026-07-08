@@ -203,7 +203,7 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
             logger.info("Test context detected. Running webhook processing synchronously.")
             if action in ["opened", "reopened", "synchronize"]:
                 # resolve profile token
-                row = await fetch_one("SELECT p.github_token FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE rm.source_repo = ?", (repo,))
+                row = await fetch_one("SELECT p.github_token FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE ? LIKE rm.source_repo || '%'", (repo,))
                 gh_svc = GitHubService(token=row["github_token"]) if row and row.get("github_token") else github_service
                 
                 result = await run_pr_analysis(
@@ -257,7 +257,7 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
                     changelog_entry = await changelog_service.generate_changelog(summary_obj, files_metadata)
                     
                     # resolve profile token for push
-                    p_row = await fetch_one("SELECT p.github_token, p.changelog_repo FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE rm.source_repo = ?", (repo,))
+                    p_row = await fetch_one("SELECT p.github_token, p.changelog_repo FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE ? LIKE rm.source_repo || '%'", (repo,))
                     gh_svc = GitHubService(token=p_row["github_token"]) if p_row and p_row.get("github_token") else github_service
                     changelog_svc = ChangelogService(gh_svc)
                     

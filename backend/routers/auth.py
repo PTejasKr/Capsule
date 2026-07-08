@@ -72,7 +72,11 @@ async def github_callback(request: Request, code: str, state: str):
         raise HTTPException(status_code=500, detail="Database error while saving token")
         
     # Redirect back to the extension or a success page
-    return {"status": "success", "message": "Authentication successful. You can close this window."}
+    return {
+        "status": "success", 
+        "message": "Authentication successful. You can close this window.",
+        "api_key": settings.API_KEY
+    }
 
 class ExtensionLoginPayload(BaseModel):
     code: str

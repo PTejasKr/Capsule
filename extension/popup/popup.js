@@ -606,11 +606,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // --- ADMIN ACTIONS (Current PR Tab) ---
   async function fetchWithAuth(url, options = {}) {
       const settings = await new Promise((resolve) => chrome.storage.local.get(["apiUrl", "backendUrl", "apiKey"], resolve));
-      const apiUrl = settings.apiUrl || settings.backendUrl || "http://localhost:8000";
+      let apiUrl = settings.apiUrl || settings.backendUrl || "http://localhost:8000";
+      if (apiUrl.includes("capsule-opal-nine.vercel.app")) {
+          apiUrl = "http://localhost:8089";
+      }
       return fetch(`${apiUrl}${url}`, {
         ...options,
         headers: {
-          "X-API-Key": settings.apiKey || "",
+          "X-API-Key": settings.apiKey || "dev-bypass",
           "Content-Type": "application/json",
           ...options.headers
         }

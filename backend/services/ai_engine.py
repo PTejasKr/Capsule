@@ -123,7 +123,7 @@ class AIEngine:
 
 You MUST output your response as a valid JSON object matching this schema:
 {{
-  "summary": "High-level summary of the overall changes and workflow impact",
+  "summary": "Detailed summary of the actual code changes, logic updates, and workflow impact. DO NOT just say 'added a file'; summarize what the file DOES.",
   "brd_comparison": "Detailed comparison and direct analysis of how the changes map to the initial BRD.",
   "changes": [
     {{
@@ -199,7 +199,7 @@ You MUST output your response as a valid JSON object matching this schema:
             "=== END OF BRD ===\n\n"
             "You MUST output your response as a valid JSON object matching this schema:\n"
             "{\n"
-            '  "summary": "High-level summary of the overall changes and workflow impact",\n'
+            '  "summary": "Detailed summary of the actual code changes, logic updates, and workflow impact. DO NOT just say \'added a file\'; summarize what the file DOES and WHY.",\n'
             '  "changes": [ { "file": "path/to/file.py", "line_range": "12-25", "change_type": "added|modified|deleted", "description": "...", "confidence": 0.95 } ],\n'
             '  "workflow_impact": { "has_impact": true|false, "severity": "none|minor|major", "impact_description": "...", "affected_workflows": ["..."], "before_state": "...", "after_state": "..." },\n'
             '  "confidence_score": 0.98\n'
@@ -278,6 +278,38 @@ You MUST output your response as a valid JSON object matching this schema:
             specific_provider="openrouter"
         )
         return json.loads(content)
+
+    async def generate_mermaid(self, workflow_text: str, model: str = None) -> str:
+        """
+        Generates a Mermaid.js graph string based on the given workflow text.
+        """
+        system_prompt = (
+            "You are an expert systems architect. Generate a Mermaid.js diagram representing the provided workflow.\n"
+            "CRITICAL: Only output the RAW Mermaid code. DO NOT wrap it in Markdown code blocks (like ```mermaid). "
+            "DO NOT add any explanations. Start directly with the graph type (e.g. graph TD or flowchart LR)."
+        )
+        user_prompt = f"Generate a Mermaid diagram for this workflow:\n{workflow_text}"
+
+        content = await self._chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=1000,
+            specific_provider=model or "multi-provider"
+        )
+        
+        # Strip any markdown blocks if the LLM hallucinated them despite instructions
+        content = content.strip()
+        if content.startswith("```mermaid"):
+            content = content[10:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+            
+        return content.strip()
 
     async def analyze_pr(self, pr_number: int, repo: str, pr_title: str, diff: str, brd_content: str, branch_name: Optional[str] = None, model: str = None) -> PRSummary:
         """Perform Map-Reduce PR analysis with chunking and a critic loop."""
