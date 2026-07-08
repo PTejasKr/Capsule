@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnEnterDashboard = document.getElementById("btn-enter-dashboard");
   const authError = document.getElementById("auth-error");
   const btnGithubLogin = document.getElementById("btn-github-login");
-  const btnBypassAuth = document.getElementById("btn-bypass-auth");
 
   // Load existing backend URL if any
   chrome.storage.local.get(["backendUrl", "apiKey"]).then(({ backendUrl, apiKey }) => {
@@ -28,16 +27,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 400);
   });
 
+  const btnBypassAuth = document.getElementById("btn-bypass-auth");
   if (btnBypassAuth) {
-    btnBypassAuth.addEventListener("click", () => {
+    btnBypassAuth.addEventListener("click", async () => {
       const backendUrl = inputLoginBackendUrl.value.trim().replace(/\/$/, "");
-      chrome.storage.local.set({ apiKey: "dev-bypass", apiUrl: backendUrl, backendUrl: backendUrl }, () => {
-        authOverlay.style.opacity = "0";
-        setTimeout(() => {
-          authOverlay.style.display = "none";
-          appContent.style.display = "flex";
-        }, 400);
-      });
+      await chrome.storage.local.set({ apiKey: "dev-bypass", apiUrl: backendUrl || "http://localhost:8000", backendUrl: backendUrl || "http://localhost:8000" });
+      authOverlay.style.opacity = "0";
+      setTimeout(() => {
+        authOverlay.style.display = "none";
+        appContent.style.display = "flex";
+      }, 400);
     });
   }
 
@@ -120,6 +119,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const btnLogout = document.getElementById("btn-logout");
+  if (btnLogout) {
+    btnLogout.addEventListener("click", async () => {
+      await chrome.storage.local.remove(["apiKey"]);
+      window.location.reload();
+    });
+  }
 
   // --- TABS LOGIC ---
   const tabBtns = document.querySelectorAll(".tab-btn");

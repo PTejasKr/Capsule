@@ -131,6 +131,16 @@ async def extension_login(payload: ExtensionLoginPayload):
         )
         
         if not is_member:
+            # Fallback for personal accounts: check if the authenticated user matches the target_org
+            user_res = await client.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"}
+            )
+            if user_res.status_code == 200:
+                if user_res.json().get("login", "").lower() == target_org.lower():
+                    is_member = True
+
+        if not is_member:
             logger.warning(f"Unauthorized login attempt. User is not in {target_org}")
             raise HTTPException(status_code=403, detail=f"Unauthorized: You must be a member of the {target_org} organization.")
             
