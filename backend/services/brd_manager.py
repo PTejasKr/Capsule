@@ -9,11 +9,8 @@ from backend.database import fetch_one, fetch_all, insert
 logger = logging.getLogger("capsule.brd_manager")
 
 DEFAULT_BRD_CONTENT = """# Sample BRD
-## PRD
 This is the default Product Requirements Document.
-## Architecture
 Backend: Python/FastAPI. Frontend: HTML/JS. Database: SQLite/PostgreSQL.
-## Web Flow
 User logs in -> views dashboard -> manages items.
 """
 
@@ -61,7 +58,6 @@ class BRDManager:
         except Exception as e:
             logger.error(f"Error fetching BRD from database for profile {profile_id}: {e}")
 
-        # Fallback to sample_brd.md if DB has nothing
         sample_path = os.path.join(self.brd_folder, "sample_brd.md")
         if os.path.exists(sample_path):
             try:

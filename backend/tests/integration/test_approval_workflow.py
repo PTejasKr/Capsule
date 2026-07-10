@@ -9,14 +9,12 @@ client = TestClient(app)
 VALID_API_KEY = settings.API_KEY
 HEADERS = {"X-API-Key": VALID_API_KEY}
 
-# Mock settings to have fake keys for testing
 @pytest.fixture(autouse=True)
 def mock_settings(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "dummy")
     monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
 def test_repair_endpoint_unauthorized():
-    # Test Security Check (401 without auth)
     response = client.post("/api/pr/123/repair", json={"edited_summary": "new"})
     assert response.status_code == 401
 
@@ -30,7 +28,6 @@ def test_repair_endpoint_success(mock_execute):
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Summary updated."
-    # Ensure it sets approved=False
     args = mock_execute.call_args[0][1]
     assert args[0] == "This is repaired"
     assert args[1] is False
@@ -64,12 +61,10 @@ async def test_failover_routing():
     from backend.services.routing_service import MultiProviderRouter
     router = MultiProviderRouter()
     
-    # Force mock providers
     provider1_mock = AsyncMock()
     provider1_mock.chat.completions.create.side_effect = Exception("429 Too Many Requests")
     
     provider2_mock = AsyncMock()
-    # Mock successful response for fallback
     class MockMsg:
         content = '{"status": "fallback_success"}'
     class MockChoice:
@@ -85,7 +80,6 @@ async def test_failover_routing():
     ]
     
     res = await router.chat_completion(messages=[])
-    # Ensure it returns the fallback response despite the first failure
     assert res == '{"status": "fallback_success"}'
     assert provider1_mock.chat.completions.create.call_count == 1
     assert provider2_mock.chat.completions.create.call_count == 1

@@ -13,7 +13,6 @@ from backend.models.schemas import PRSummary, WorkflowImpact, ChangelogEntry, BR
 logger = logging.getLogger("capsule.api")
 router = APIRouter(tags=["api"])
 
-# Initialize services
 github_service = GitHubService()
 ai_engine = AIEngine()
 brd_manager = BRDManager()
@@ -75,7 +74,6 @@ async def get_pr_summary(pr_number: int, repo: str = Depends(validate_repo)):
             detail=f"Summary not found for PR #{pr_number}. Make sure it has been analyzed."
         )
     
-    # Check pipeline visibility / approval gate
     is_approved = bool(row.get("approved"))
     branch = row.get("branch")
     if not is_approved and branch != "main":
@@ -155,7 +153,6 @@ async def generate_and_push_changelog(pr_number: int, repo: Optional[str] = None
     row = await fetch_one(sql, (pr_number, repo))
     
     if not row:
-        # If not analyzed, analyze now
         try:
             from backend.routers.webhooks import run_pr_analysis
             await run_pr_analysis(repo, pr_number)
@@ -196,7 +193,6 @@ async def approve_pr(pr_number: int, repo: str = Depends(validate_repo)):
     """
     from backend.database import execute_query
     
-    # 1. Mark as approved in DB
     sql = "UPDATE pr_analyses SET approved = ? WHERE pr_number = ? AND repo = ?"
     updated = await execute_query(sql, (True, pr_number, repo))
     if not updated:
@@ -205,7 +201,6 @@ async def approve_pr(pr_number: int, repo: str = Depends(validate_repo)):
             detail=f"PR #{pr_number} in {repo} not found to approve."
         )
         
-    # 2. Trigger changelog generation and push
     try:
         changelog_result = await generate_and_push_changelog(pr_number, repo)
         return {
@@ -301,13 +296,10 @@ async def auto_repair_pr(pr_number: int, repo: str = Depends(validate_repo)):
     if not branch or branch == "main":
         raise HTTPException(status_code=400, detail="Cannot auto-repair the main branch or unknown branch.")
         
-    # 1. Fetch current files changed in the PR
     files_metadata = await github_service.get_pr_files(repo, pr_number)
     
-    # 2. Use AI Engine to generate patch
     patch_result = await ai_engine.auto_repair_code(row.get("summary"), files_metadata)
     
-    # 3. Apply patch via GitHub API
     commit_result = await github_service.commit_repair_patch(repo, branch, patch_result)
     
     return {
@@ -353,7 +345,6 @@ async def setup_repository(request: RepoSetupRequest):
     
     logger.info(f"Running automated Capsule infrastructure setup for repository: {repo}")
     
-    # Step 1: Ensure changelog branch exists
     try:
         await github_service.ensure_branch_exists(repo, "changelog")
     except Exception as e:
@@ -363,7 +354,6 @@ async def setup_repository(request: RepoSetupRequest):
             detail=f"Failed to check/create changelog branch on GitHub: {str(e)}"
         )
         
-    # Step 2: Configure Webhook programmatically
     try:
         hook_res = await github_service.create_repository_webhook(repo, callback_url)
     except Exception as e:

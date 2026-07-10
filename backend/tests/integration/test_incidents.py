@@ -36,7 +36,6 @@ async def test_github_api_timeout_incident(mock_brd_manager, mock_github_service
     """
     mock_brd_manager.load_brd = AsyncMock(return_value="Mock BRD")
     
-    # Simulate a timeout exception from httpx
     mock_github_service.get_pr_details = AsyncMock(side_effect=httpx.TimeoutException("GitHub API timed out"))
     
     payload = {
@@ -53,10 +52,6 @@ async def test_github_api_timeout_incident(mock_brd_manager, mock_github_service
         "x-github-event": "pull_request"
     }
 
-    # Since the route doesn't catch all exceptions explicitly, FastAPI will raise 500 Internal Server Error
-    # but we can verify it doesn't crash the server and returns a 500 response.
-    # We might need to ensure our app actually raises an HTTPException(503) or lets the 500 propagate.
-    # In FastAPI TestClient, an unhandled exception will raise a 500 in the test client if we let it.
     response = client.post("/webhooks/github", content=payload_bytes, headers=headers)
     assert response.status_code == 504
     assert "Timeout" in response.json()["detail"]

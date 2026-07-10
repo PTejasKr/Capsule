@@ -25,9 +25,6 @@ from backend.config import settings
 logger = get_task_logger("capsule.tasks")
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _run_async(coro):
     """Bridge Celery's synchronous task context to async service calls."""
@@ -57,7 +54,6 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
     ai_engine = AIEngine()
     brd_manager = BRDManager()
 
-    # --- resolve profile ---
     row = await fetch_one("""
         SELECT p.* FROM profiles p
         JOIN repository_mappings rm ON p.id = rm.profile_id
@@ -81,14 +77,12 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
 
     github_service = GitHubService(token=profile.get("github_token"))
 
-    # --- fetch from GitHub ---
     pr_details = await github_service.get_pr_details(repo, pr_number)
     pr_diff    = await github_service.get_pr_diff(repo, pr_number)
 
     sanitized_diff  = sanitize_text(pr_diff)
     sanitized_title = sanitize_text(pr_details["title"])
 
-    # --- AI analysis (Map-Reduce inside AIEngine) ---
     summary = await ai_engine.analyze_pr(
         pr_number=pr_number,
         repo=repo,
@@ -98,7 +92,6 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
         model=profile["ai_model"],
     )
 
-    # --- persist ---
     await insert("pr_analyses", {
         "pr_number":            pr_number,
         "repo":                 repo,
@@ -163,7 +156,6 @@ async def _core_changelog(repo: str, pr_number: int) -> dict:
         confidence_score=row["confidence_score"],
     )
 
-    # resolve changelog repo for this profile
     profile_row = await fetch_one("""
         SELECT p.* FROM profiles p
         JOIN repository_mappings rm ON p.id = rm.profile_id
@@ -178,9 +170,6 @@ async def _core_changelog(repo: str, pr_number: int) -> dict:
     return {"version": entry.version, "push_result": result}
 
 
-# ---------------------------------------------------------------------------
-# Celery task definitions
-# ---------------------------------------------------------------------------
 
 @celery_app.task(
     bind=True,

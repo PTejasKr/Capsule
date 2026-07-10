@@ -1,8 +1,6 @@
-// Default configurations
 const DEFAULT_API_URL = "http://localhost:8089";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-// Message listener
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "FETCH_SUMMARY") {
     handleFetchSummary(request.repo, request.prNumber)
@@ -33,7 +31,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Helper to retrieve saved settings from storage
 async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.local.get(["apiUrl", "apiKey"], (items) => {
@@ -45,7 +42,6 @@ async function getSettings() {
   });
 }
 
-// Check cache for valid entries
 async function getCache(key) {
   return new Promise((resolve) => {
     chrome.storage.local.get([key], (result) => {
@@ -59,7 +55,6 @@ async function getCache(key) {
   });
 }
 
-// Write to cache
 async function setCache(key, data) {
   const entry = {
     data: data,
@@ -75,20 +70,17 @@ async function setCache(key, data) {
 async function handleFetchSummary(repo, prNumber) {
   const cacheKey = `summary_cache_${repo}_${prNumber}`;
   
-  // 1. Try Cache
   const cached = await getCache(cacheKey);
   if (cached) {
     console.log("Serving PR summary from cache:", cacheKey);
     return cached;
   }
 
-  // 2. Load API settings
   const settings = await getSettings();
   if (!settings.apiKey) {
     throw new Error("Missing API Key. Open Extension Options to configure.");
   }
 
-  // 3. Make fetch call
   const url = `${settings.apiUrl}/api/pr/${prNumber}/summary?repo=${encodeURIComponent(repo)}`;
   console.log("Fetching summary from API URL:", url);
   
@@ -113,10 +105,8 @@ async function handleFetchSummary(repo, prNumber) {
 
   const data = await res.json();
   
-  // 4. Update Cache
   await setCache(cacheKey, data);
   
-  // 5. Update Badge Color on Icon based on severity
   updateIconBadge(data.workflow_impact?.severity);
 
   return data;
@@ -125,20 +115,17 @@ async function handleFetchSummary(repo, prNumber) {
 async function handleFetchChangelog(repo, prNumber) {
   const cacheKey = `changelog_cache_${repo}_${prNumber}`;
   
-  // 1. Try Cache
   const cached = await getCache(cacheKey);
   if (cached) {
     console.log("Serving changelog from cache:", cacheKey);
     return cached;
   }
 
-  // 2. Load API settings
   const settings = await getSettings();
   if (!settings.apiKey) {
     throw new Error("Missing API Key. Open Extension Options to configure.");
   }
 
-  // 3. Make fetch call
   const url = `${settings.apiUrl}/api/pr/${prNumber}/changelog-preview?repo=${encodeURIComponent(repo)}`;
   const res = await fetch(url, {
     method: "GET",
@@ -158,7 +145,6 @@ async function handleFetchChangelog(repo, prNumber) {
 
   const data = await res.json();
   
-  // 4. Update Cache
   await setCache(cacheKey, data);
   
   return data;
@@ -220,7 +206,6 @@ async function handleGenerateWorkflowImage(workflowText) {
   return data.image_url;
 }
 
-// Helper to update Extension Badge Color based on workflow change severity
 function updateIconBadge(severity) {
   if (!chrome.action) return;
 

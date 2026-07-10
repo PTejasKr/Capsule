@@ -15,9 +15,6 @@ from backend.config import settings
 
 logger = logging.getLogger("capsule.worker")
 
-# ---------------------------------------------------------------------------
-# App factory
-# ---------------------------------------------------------------------------
 REDIS_HOST = getattr(settings, "REDIS_HOST", "redis")
 REDIS_PORT = getattr(settings, "REDIS_PORT", 6379)
 
@@ -31,36 +28,27 @@ celery_app = Celery(
     include=["backend.tasks"],  # auto-discover tasks module
 )
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
 import sys
 IS_TESTING = os.environ.get("TESTING") == "true" or "pytest" in sys.modules
 
 celery_app.conf.update(
-    # Test setting
     task_always_eager=IS_TESTING,
     task_eager_propagates=IS_TESTING,
 
-    # Serialisation
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
 
-    # Reliability
     task_acks_late=True,           # Ack only after successful execution
     task_reject_on_worker_lost=True,
 
     worker_prefetch_multiplier=1,  # One task at a time per worker (LLM calls are heavy)
 
-    # Result TTL — keep results for 2 hours (for webhook status polling)
     result_expires=7200,
 
-    # Retry policy defaults (tasks can override)
     task_default_retry_delay=15,   # seconds
     task_max_retries=3,
 
-    # Timezone
     timezone="UTC",
     enable_utc=True,
 )

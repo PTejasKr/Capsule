@@ -18,11 +18,9 @@ async def test_cross_pipeline_branch_visibility_control(mock_push):
     await init_db()
     mock_push.return_value = {"version": "v1.0.1"}
     
-    # 1. Setup - insert a feature branch PR analysis (unapproved)
     repo = "testorg/testsecurity"
     pr_num = 501
     
-    # Clean up any residual data first
     await execute_query("DELETE FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_num, repo))
     
     await insert("pr_analyses", {
@@ -37,24 +35,20 @@ async def test_cross_pipeline_branch_visibility_control(mock_push):
         "confidence_score": 0.95
     })
     
-    # 2. Try fetching the summary - should be Forbidden (403)
     headers = {"X-API-Key": settings.API_KEY}
     response = client.get(f"/api/pr/{pr_num}/summary?repo={repo}", headers=headers)
     assert response.status_code == 403
     assert "requires pipeline approval" in response.json()["detail"]
     
-    # 3. Approve the PR analysis
     approve_response = client.post(f"/api/pr/{pr_num}/approve?repo={repo}", headers=headers)
     assert approve_response.status_code == 200
     assert approve_response.json()["status"] == "success"
     
-    # 4. Fetch again - should now be OK (200)
     response = client.get(f"/api/pr/{pr_num}/summary?repo={repo}", headers=headers)
     assert response.status_code == 200
     assert response.json()["pr_number"] == pr_num
     assert response.json()["branch"] == "feature/payment-fix"
     
-    # 5. Verify that 'main' branch PR analysis is visible immediately without approval
     main_pr_num = 502
     await execute_query("DELETE FROM pr_analyses WHERE pr_number = ? AND repo = ?", (main_pr_num, repo))
     await insert("pr_analyses", {
@@ -74,7 +68,6 @@ async def test_cross_pipeline_branch_visibility_control(mock_push):
     assert response.json()["pr_number"] == main_pr_num
     assert response.json()["branch"] == "main"
     
-    # Clean up
     await execute_query("DELETE FROM pr_analyses WHERE repo = ?", (repo,))
 
 @pytest.mark.asyncio
@@ -90,7 +83,6 @@ async def test_data_duplication_prevention():
     
     await execute_query("DELETE FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_num, repo))
     
-    # First insert
     await insert("pr_analyses", {
         "pr_number": pr_num,
         "repo": repo,
@@ -103,7 +95,6 @@ async def test_data_duplication_prevention():
         "confidence_score": 0.8
     })
     
-    # Second insert (updates the entry)
     await insert("pr_analyses", {
         "pr_number": pr_num,
         "repo": repo,
@@ -116,14 +107,12 @@ async def test_data_duplication_prevention():
         "confidence_score": 0.95
     })
     
-    # Verify only one row exists and it has the updated value
     headers = {"X-API-Key": settings.API_KEY}
     response = client.get(f"/api/pr/{pr_num}/summary?repo={repo}", headers=headers)
     assert response.status_code == 200
     assert response.json()["title"] == "Second Version"
     assert response.json()["summary"] == "Updated summary"
     
-    # Clean up
     await execute_query("DELETE FROM pr_analyses WHERE repo = ?", (repo,))
 
 @pytest.mark.asyncio
@@ -140,7 +129,6 @@ async def test_data_leakage_checks():
     await execute_query("DELETE FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_num, repo))
     await execute_query("DELETE FROM audit_log WHERE pr_number = ?", (pr_num,))
     
-    # Insert audit entry containing mock output
     await insert("audit_log", {
         "pr_number": pr_num,
         "input_hash": "hash123",
@@ -150,14 +138,11 @@ async def test_data_leakage_checks():
         "latency_ms": 320.5
     })
     
-    # Fetch log from DB to verify it does not contain credentials
     log = await fetch_one("SELECT * FROM audit_log WHERE pr_number = ?", (pr_num,))
     assert log is not None
     
-    # Convert log to string to do a simple containment check
     log_str = json.dumps(dict(log))
     
-    # Check that secrets are not in the log
     if settings.GITHUB_TOKEN:
         assert settings.GITHUB_TOKEN not in log_str
     if settings.NVIDIA_NIM_API_KEY:
@@ -165,5 +150,4 @@ async def test_data_leakage_checks():
     if settings.API_KEY:
         assert settings.API_KEY not in log_str
         
-    # Clean up
     await execute_query("DELETE FROM audit_log WHERE pr_number = ?", (pr_num,))

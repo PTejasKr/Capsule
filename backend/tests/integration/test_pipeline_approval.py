@@ -16,12 +16,10 @@ async def test_jenkins_webhook_unauthorized():
     """
     payload = {"pr_number": 123, "action": "opened"}
     
-    # Missing API Key
     response = client.post("/webhooks/jenkins", json=payload)
     assert response.status_code == 401
     assert "Could not validate credentials" in response.json()["detail"]
     
-    # Invalid API Key
     headers = {"X-API-Key": "invalid_key"}
     response = client.post("/webhooks/jenkins", json=payload, headers=headers)
     assert response.status_code == 401
@@ -73,5 +71,4 @@ async def test_approval_procedure_unmerged_pr_close(mock_run_pr_analysis, mock_f
     assert response.status_code == 200
     assert response.json()["status"] == "ignored_action"
     
-    # Assert changelog generation was NOT triggered
     mock_fetch_one.assert_not_called()

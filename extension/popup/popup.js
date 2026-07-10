@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  // Elements
   const stateLoading = document.getElementById("state-loading");
   const stateNoPr = document.getElementById("state-no-pr");
   const stateError = document.getElementById("state-error");
@@ -38,18 +37,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnToggleChangelog = document.getElementById("btn-toggle-changelog");
   const changelogContainer = document.getElementById("changelog-preview-container");
 
-  // Admin Tools Elements (Current PR)
   const adminSummaryEdit = document.getElementById("admin-summary-edit");
   const btnRepair = document.getElementById("btn-repair");
   const btnCompare = document.getElementById("btn-compare");
   const compareResults = document.getElementById("compare-results");
   const btnApprove = document.getElementById("btn-approve");
 
-  // Track state
   let currentRepo = "";
   let currentPrNumber = null;
 
-  // Setup accordions for Current PR
   btnToggleChanges.addEventListener("click", () => {
     btnToggleChanges.classList.toggle("active");
     changesContainer.classList.toggle("hidden");
@@ -60,7 +56,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     changelogContainer.classList.toggle("hidden");
   });
 
-  // Settings redirect
   btnSettings.addEventListener("click", async () => {
     const optionsUrl = chrome.runtime.getURL("options/options.html");
     try {
@@ -78,7 +73,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   btnRetry.addEventListener("click", loadPrAnalysis);
   btnRefresh.addEventListener("click", loadPrAnalysis);
 
-  // Copy to clipboard
   btnCopyChangelog.addEventListener("click", () => {
     const text = changelogTextEl.textContent;
     navigator.clipboard.writeText(text).then(() => {
@@ -92,14 +86,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Main logic
   async function loadPrAnalysis() {
     stateLoading.classList.remove("hidden");
     dashboardContent.classList.add("hidden");
     stateNoPr.classList.add("hidden");
     stateError.classList.add("hidden");
 
-    // 1. Get current active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     let isGithubPR = false;
@@ -116,12 +108,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (!isGithubPR) {
-      // If not on GitHub PR, switch to Dashboard
       document.getElementById("tab-dashboard").click();
       return;
     }
 
-    // Switch to Current PR tab if it is a PR
     switchTab(document.getElementById("tab-pr"), document.getElementById("panel-pr"));
     
     currentRepo = `${owner}/${repo}`;
@@ -131,7 +121,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     prNumberEl.textContent = `PR #${currentPrNumber}`;
 
     try {
-      // 3. Fetch summary from backend
       const response = await chrome.runtime.sendMessage({
         type: "FETCH_SUMMARY",
         repo: currentRepo,
@@ -145,7 +134,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const summary = response.data;
       renderCurrentPR(summary);
       
-      // 4. Fetch changelog preview
       const changelogResponse = await chrome.runtime.sendMessage({
         type: "FETCH_CHANGELOG",
         repo: currentRepo,
@@ -249,7 +237,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return text;
   }
 
-  // --- TAB NAVIGATION SYSTEM ---
   const tabs = [
     { button: document.getElementById("tab-dashboard"), panel: document.getElementById("panel-dashboard"), onShow: loadDashboard },
     { button: document.getElementById("tab-pr"), panel: document.getElementById("panel-pr") },
@@ -278,7 +265,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // --- DASHBOARD LOGIC ---
   async function loadDashboard() {
     showState(dashboardContent);
     const repoTabsEl = document.getElementById("repo-tabs");
@@ -303,7 +289,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      // Group by repo
       const repos = {};
       pendingPrs.forEach(pr => {
         if (!repos[pr.repo]) repos[pr.repo] = [];
@@ -314,7 +299,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       for (const repo in repos) {
         if (!firstRepo) firstRepo = repo;
         
-        // Create tab
         const tab = document.createElement("div");
         tab.className = "repo-tab";
         tab.textContent = repo;
@@ -323,7 +307,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         repoTabsEl.appendChild(tab);
       }
 
-      // Select first repo by default
       if (firstRepo) {
         selectRepoTab(firstRepo, repos);
       }
@@ -337,12 +320,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function selectRepoTab(selectedRepo, allReposData) {
-    // Update active tab style
     document.querySelectorAll(".repo-tab").forEach(t => {
       t.classList.toggle("active", t.dataset.repo === selectedRepo);
     });
 
-    // Render PRs for this repo
     const container = document.getElementById("repo-prs-container");
     container.innerHTML = "";
 
@@ -390,7 +371,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       `;
 
-      // Accordion toggle
       const header = card.querySelector(".dashboard-card-header");
       const body = card.querySelector(".dashboard-card-body");
       const chevron = card.querySelector(".chevron-icon");
@@ -401,7 +381,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         chevron.style.transform = card.classList.contains("expanded") ? "rotate(180deg)" : "rotate(0deg)";
       });
 
-      // Bind buttons
       card.querySelector(".dash-repair").addEventListener("click", (e) => handleDashRepair(e.target));
       card.querySelector(".dash-compare").addEventListener("click", (e) => handleDashCompare(e.target));
       card.querySelector(".dash-autorepair").addEventListener("click", (e) => handleDashAutoRepair(e.target));
@@ -412,7 +391,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Dashboard Button Handlers
   async function handleDashRepair(btn) {
     const prNum = btn.dataset.pr;
     const repo = btn.dataset.repo;
@@ -502,7 +480,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetchWithAuth(`/api/pr/${prNum}/reject?repo=${encodeURIComponent(repo)}`, { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       
-      // Remove card from UI
       btn.closest('.dashboard-card').remove();
     } catch(e) { 
       alert(e.message); 
@@ -511,7 +488,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // --- WEEKLY CHANGES ---
   async function loadWeeklyChanges() {
     const weeklyLoading = document.getElementById("weekly-loading");
     const weeklyEmpty = document.getElementById("weekly-empty");
@@ -558,7 +534,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // --- WORKFLOW PREFILL ---
   let brdWorkflowLoaded = false;
   async function loadCurrentBrdWorkflow() {
     if (brdWorkflowLoaded) return;
@@ -577,7 +552,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { console.warn("Failed to pre-fill BRD workflow reference:", err); }
   }
 
-  // --- WORKFLOW GENERATION ---
   const btnGenerateWf = document.getElementById("btn-generate-wf");
   const wfImageLoading = document.getElementById("wf-image-loading");
   const wfImageContainer = document.getElementById("wf-image-container");
@@ -603,7 +577,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // --- ADMIN ACTIONS (Current PR Tab) ---
   async function fetchWithAuth(url, options = {}) {
       const settings = await new Promise((resolve) => chrome.storage.local.get(["apiUrl", "backendUrl", "apiKey"], resolve));
       let apiUrl = settings.apiUrl || settings.backendUrl || "http://localhost:8000";
@@ -666,6 +639,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) { alert(e.message); btnApprove.textContent = "Approve & Push Changelog"; btnApprove.disabled = false; }
   });
 
-  // Load immediately on open
   await loadPrAnalysis();
 });

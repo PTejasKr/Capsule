@@ -6,7 +6,6 @@ from backend.database import fetch_one
 async def run_test():
     repo = "PTejasKr/OS-Tracker"
     
-    # Check if we have a profile mapping
     profile = await fetch_one("SELECT * FROM profiles LIMIT 1")
     if not profile:
         print("No profile found. Please create one.")
@@ -35,14 +34,12 @@ async def run_test():
         "X-Hub-Signature-256": "sha256=MOCK_SIGNATURE" # Webhook signature verify might need to be bypassed for mock
     }
     
-    # We will invoke the webhooks service function directly to bypass signature verification
     from backend.routers.webhooks import process_pull_request_event
     print("Triggering PR processing...")
     try:
         await process_pull_request_event(payload)
         print("Processing complete!")
         
-        # Verify in DB
         res = await fetch_one("SELECT * FROM pr_analyses WHERE repo = ? AND pr_number = ?", (repo, 999))
         if res:
             print("SUCCESS: PR Analysis found in database!")

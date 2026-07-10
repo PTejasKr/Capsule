@@ -13,7 +13,6 @@ logger = logging.getLogger("capsule.ai_engine")
 
 class AIEngine:
     def __init__(self):
-        # We store a mock client for testing compatibility (e.g. DummyClient)
         self.client = None
 
     async def _chat_completion(
@@ -52,7 +51,6 @@ class AIEngine:
             if line.startswith("--- a/"):
                 file_path = line[6:].strip()
                 if file_path and file_path != "/dev/null":
-                    # Split on space or tab to clean up any additional headers
                     file_path = file_path.split(" ")[0].split("\t")[0]
                     changed_files.add(file_path)
             elif line.startswith("+++ b/"):
@@ -77,11 +75,9 @@ class AIEngine:
                 continue
                 
             is_valid = False
-            # Check for exact or suffix match to accommodate relative paths
             for actual in actual_files:
                 if file_path == actual or actual.endswith("/" + file_path) or file_path.endswith("/" + actual):
                     is_valid = True
-                    # Normalize to actual repo filepath
                     change["file"] = actual
                     break
 
@@ -93,7 +89,6 @@ class AIEngine:
 
         ai_output["changes"] = validated_changes
         
-        # Penalize confidence score if files were fabricated
         orig_confidence = float(ai_output.get("confidence_score", 1.0))
         if changes:
             penalty = (removed_count / len(changes)) * 0.5
@@ -227,7 +222,6 @@ You MUST output your response as a valid JSON object matching this schema:
         line_count = 0
         for line in lines:
             if line.startswith("--- a/") or line.startswith("+++ b/"):
-                # If starting new file and current chunk would exceed size, flush
                 if line_count >= max_lines and current_chunk:
                     chunks.append("".join(current_chunk))
                     current_chunk = []
@@ -240,7 +234,6 @@ You MUST output your response as a valid JSON object matching this schema:
                 line_count = 0
         if current_chunk:
             chunks.append("".join(current_chunk))
-        # Ensure each chunk ends with a newline for proper reconstruction
         chunks = [c if c.endswith("\n") else c + "\n" for c in chunks]
         return chunks
 
@@ -300,7 +293,6 @@ You MUST output your response as a valid JSON object matching this schema:
             specific_provider=model or "multi-provider"
         )
         
-        # Strip any markdown blocks if the LLM hallucinated them despite instructions
         content = content.strip()
         if content.startswith("```mermaid"):
             content = content[10:]
@@ -318,37 +310,27 @@ You MUST output your response as a valid JSON object matching this schema:
         start_time = time.time()
         input_hash = hashlib.sha256((diff + brd_content).encode()).hexdigest()
 
-        # Map phase: chunk diff and analyze each chunk concurrently
         chunks = self._chunk_diff(diff)
-        # Create coroutine tasks for each chunk
         tasks = [self._analyze_chunk(chunk, brd_content, target_model) for chunk in chunks]
         map_results = await asyncio.gather(*tasks)
 
-        # Reduce phase: aggregate results
         combined: Dict[str, Any] = {"summary": "", "changes": [], "workflow_impact": {}, "confidence_score": 1.0}
         for part in map_results:
-            # Append summaries
             if part.get("summary"):
                 combined["summary"] += part["summary"] + "\n"
-            # Merge changes
             combined["changes"].extend(part.get("changes", []))
-            # Merge workflow impact (simple union, keep first non-empty)
             if not combined["workflow_impact"] and part.get("workflow_impact"):
                 combined["workflow_impact"] = part["workflow_impact"]
-        # Average confidence scores if multiple parts
         scores = [p.get("confidence_score", 0) for p in map_results if isinstance(p.get("confidence_score"), (int, float))]
         if scores:
             combined["confidence_score"] = round(sum(scores) / len(scores), 2)
 
-        # Holistic reduce pass: capture cross-chunk relationships lost during map phase.
-        # Skipped when GLOBAL_REDUCE_ENABLED is false (falls back to merged chunks).
         if getattr(settings, "GLOBAL_REDUCE_ENABLED", True):
             try:
                 combined = await self._reduce_overall(combined, brd_content, target_model)
             except Exception as e:
                 logger.warning(f"Global reduce pass failed, falling back to merged chunks: {e}")
 
-        # Critic loop to ensure no hallucinations
         critic_output = await self._critic_review(combined, diff, target_model)
         actual_files = self._parse_diff_files(diff)
         validated_data = self.cross_validate_output(critic_output, actual_files)
@@ -357,7 +339,6 @@ You MUST output your response as a valid JSON object matching this schema:
         tokens = 0  # Token counting would require aggregating from all calls; omitted for brevity
         await self._log_audit(pr_number, input_hash, validated_data, tokens, latency_ms, target_model)
 
-        # Map to schemas
         changes = [
             ChangeItem(
                 file=c.get("file", ""),
@@ -484,7 +465,6 @@ You MUST output your response as a valid JSON object matching this schema:
         """
         logger.info("[Capsule] Starting Agentic Execution Loop for Auto-Repair")
         
-        # 1. Context Gathering & Task Planning (Architect Mode)
         architect_plan = await self._architect_mode(summary, files_metadata)
         
         max_retries = 2
@@ -493,10 +473,8 @@ You MUST output your response as a valid JSON object matching this schema:
         final_code = None
         
         while attempt <= max_retries:
-            # 2. Code Generation & Implementation (Coder Mode)
             generated_code = await self._coder_mode(architect_plan, files_metadata, feedback)
             
-            # 3. Automated Verification & Failure Recovery (Debugger Mode)
             verification = await self._debugger_mode(generated_code, architect_plan)
             
             if verification.get("is_valid", False):

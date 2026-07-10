@@ -21,7 +21,6 @@ def make_request(url, method="GET", headers=None, payload=None):
         data = json.dumps(payload).encode("utf-8")
         req_headers["Content-Type"] = "application/json"
         
-    # Security: only allow https:// requests to prevent file:// or custom scheme abuse (B310)
     if not url.startswith("https://"):
         return 400, {"detail": f"Blocked request to non-HTTPS URL: {url}"}
 
@@ -79,11 +78,9 @@ def run_analysis(args):
         
     analysis_result = None
     if status == 200:
-        # Sync response
         print("Analysis completed synchronously.")
         analysis_result = response.get("summary")
     else:
-        # Async response
         task_id = response.get("task_id")
         print(f"Analysis enqueued. Task ID: {task_id}. Polling for completion...")
         
@@ -114,7 +111,6 @@ def run_analysis(args):
             print("Error: Polling timed out before task completed.")
             sys.exit(1)
             
-    # Print analysis summary
     print("\n" + "="*80)
     print(f" CAPSULE ANALYSIS FOR PR #{args.pr}")
     print("="*80)
@@ -133,13 +129,11 @@ def run_analysis(args):
     print(analysis_result.get("summary"))
     print("="*80 + "\n")
     
-    # Format a Markdown summary for the GitHub PR Comment
     comment_body = f"""### 🛡️ Capsule CI Analysis Report
 **Pull Request:** #{args.pr}
 **Title:** {analysis_result.get('title')}
 **Confidence Score:** `{int(analysis_result.get('confidence_score', 0) * 100)}%`
 
-#### 📊 Workflow Impact Assessment
 - **Has Workflow Impact:** {'Yes' if has_impact else 'No'}
 - **Change Severity:** `{severity}`
 - **Affected Business Flows:** {', '.join([f'`{f}`' for f in wf_impact.get('affected_workflows', [])]) or 'None'}
@@ -159,9 +153,7 @@ def run_analysis(args):
     if github_token:
         post_github_comment(args.repo, args.pr, github_token, comment_body)
         
-    # Check if the PR requires approval
     if has_impact and severity == "MAJOR":
-        # Check if already approved
         print("Checking if PR is already approved in the Capsule database...")
         check_url = f"{api_url}/api/pr/{args.pr}/summary?repo={urllib.parse.quote(args.repo)}"
         c_status, c_resp = make_request(check_url, headers=headers)

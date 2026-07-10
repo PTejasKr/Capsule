@@ -9,7 +9,6 @@ from backend.database import execute
 logger = logging.getLogger("capsule.auth")
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Using GitHub OAuth URL
 GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
@@ -43,7 +42,6 @@ async def github_callback(request: Request, code: str, state: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid state parameter")
 
-    # Exchange code for token
     headers = {"Accept": "application/json"}
     payload = {
         "client_id": client_id,
@@ -63,7 +61,6 @@ async def github_callback(request: Request, code: str, state: str):
             logger.error(f"GitHub token response missing access_token: {data}")
             raise HTTPException(status_code=500, detail="Invalid token response from GitHub")
             
-    # Save token to the profile
     try:
         await execute("UPDATE profiles SET github_token = ? WHERE id = ?", (access_token, profile_id))
         logger.info(f"Successfully saved GitHub token for profile {profile_id}")
@@ -71,7 +68,6 @@ async def github_callback(request: Request, code: str, state: str):
         logger.error(f"Failed to update profile token: {e}")
         raise HTTPException(status_code=500, detail="Database error while saving token")
         
-    # Redirect back to the extension or a success page
     return {
         "status": "success", 
         "message": "Authentication successful. You can close this window.",
@@ -94,8 +90,6 @@ async def extension_login(payload: ExtensionLoginPayload):
     if not client_id or not client_secret:
         raise HTTPException(status_code=500, detail="GitHub OAuth credentials not configured")
     if not target_org:
-        # If no org is configured, we can either reject or allow anyone.
-        # Since this is enterprise software, we should reject if not configured securely.
         raise HTTPException(status_code=500, detail="COMPANY_GITHUB_ORG not configured")
 
     headers = {"Accept": "application/json"}
@@ -106,7 +100,6 @@ async def extension_login(payload: ExtensionLoginPayload):
     }
     
     async with httpx.AsyncClient() as client:
-        # 1. Exchange code for token
         res = await client.post(GITHUB_TOKEN_URL, json=auth_payload, headers=headers)
         if res.status_code != 200:
             logger.error(f"Failed to fetch GitHub token for extension: {res.text}")
@@ -118,7 +111,6 @@ async def extension_login(payload: ExtensionLoginPayload):
             logger.error(f"GitHub token response missing access_token: {data}")
             raise HTTPException(status_code=401, detail="Invalid token response from GitHub")
             
-        # 2. Check user's orgs (including private memberships if authorized)
         orgs_res = await client.get(
             "https://api.github.com/user/memberships/orgs",
             headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"}
@@ -135,7 +127,6 @@ async def extension_login(payload: ExtensionLoginPayload):
         )
         
         if not is_member:
-            # Fallback for personal accounts: check if the authenticated user matches the target_org
             user_res = await client.get(
                 "https://api.github.com/user",
                 headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"}
@@ -148,7 +139,6 @@ async def extension_login(payload: ExtensionLoginPayload):
             logger.warning(f"Unauthorized login attempt. User is not in {target_org}")
             raise HTTPException(status_code=403, detail=f"Unauthorized: You must be a member of the {target_org} organization.")
             
-        # 3. Success! Return API key
         logger.info("Extension auto-login successful.")
         return {
             "status": "success",

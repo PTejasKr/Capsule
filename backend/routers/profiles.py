@@ -81,13 +81,11 @@ async def deploy_webhook(request: WebhookDeployRequest):
     if not token:
         raise HTTPException(status_code=400, detail="Profile has no github_token configured")
         
-    # Map repository in DB as well
     try:
         await insert("repository_mappings", {"source_repo": request.source_repo, "profile_id": request.profile_id})
     except Exception as e:
         logger.warning(f"Repo already mapped or mapping failed: {e}")
 
-    # Register webhook on GitHub
     headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
@@ -117,7 +115,6 @@ async def deploy_webhook(request: WebhookDeployRequest):
             logger.error(f"GitHub API Error: {resp.text}")
             raise HTTPException(status_code=400, detail=f"Failed to deploy webhook: {resp.text}")
 
-# --- BRD Endpoints scoped by profile_id ---
 
 @router.post("/{profile_id}/brd/upload", response_model=BRDUploadResponse)
 async def upload_brd_file(
@@ -180,15 +177,12 @@ async def get_pr_history(profile_id: int):
     """
     rows = await fetch_all(sql, (profile_id,))
     
-    # Avoid circular dependency by importing _reconstruct_summary_from_row locally if needed,
-    # or just return the dict representations if the client doesn't need full reconstruction.
     from backend.routers.api import _reconstruct_summary_from_row
     
     summaries = []
     for r in rows:
         try:
             summary = await _reconstruct_summary_from_row(r)
-            # add analyzed_at to summary if not present in schema
             sum_dict = summary.model_dump()
             sum_dict["analyzed_at"] = r.get("analyzed_at")
             summaries.append(sum_dict)

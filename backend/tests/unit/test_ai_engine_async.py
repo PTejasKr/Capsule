@@ -41,7 +41,6 @@ def mock_llm_response():
 @pytest.mark.asyncio
 async def test_analyze_pr_success(dummy_diff, dummy_brd, mock_llm_response):
     engine = AIEngine()
-    # Patch the AsyncOpenAI client chat call to return deterministic JSON
     with patch.object(engine, "client") as mock_client:
         async_response = AsyncMock()
         async_response.choices = [type('Choice', (), {"message": type('Message', (), {"content": json.dumps(mock_llm_response)})})]

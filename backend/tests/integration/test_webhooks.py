@@ -23,13 +23,11 @@ def generate_github_signature(payload_body: bytes, secret: str) -> str:
 @patch("backend.routers.webhooks.brd_manager")
 @patch("backend.routers.webhooks.insert")
 async def test_github_webhook_pr_opened(mock_insert, mock_brd_manager, mock_ai_engine, mock_github_service):
-    # Setup mocks
     mock_brd_manager.load_brd = AsyncMock(return_value="Mock BRD Content")
     
     mock_github_service.get_pr_details = AsyncMock(return_value={"title": "Test PR", "number": 123})
     mock_github_service.get_pr_diff = AsyncMock(return_value="--- a/file.py\n+++ b/file.py\n+print('hello')")
     
-    # Mock AI response
     from backend.models.schemas import PRSummary, WorkflowImpact, Severity
     mock_ai_summary = PRSummary(
         pr_number=123,
@@ -49,7 +47,6 @@ async def test_github_webhook_pr_opened(mock_insert, mock_brd_manager, mock_ai_e
     mock_ai_engine.analyze_pr = AsyncMock(return_value=mock_ai_summary)
     mock_insert = AsyncMock()
 
-    # Payload
     payload = {
         "action": "opened",
         "number": 123,
@@ -68,10 +65,8 @@ async def test_github_webhook_pr_opened(mock_insert, mock_brd_manager, mock_ai_e
         "x-github-event": "pull_request"
     }
 
-    # Execute
     response = client.post("/webhooks/github", content=payload_bytes, headers=headers)
     
-    # Verify
     assert response.status_code == 200
     assert response.json()["status"] == "analyzed"
     assert response.json()["pr_number"] == 123
@@ -84,7 +79,6 @@ async def test_github_webhook_pr_opened(mock_insert, mock_brd_manager, mock_ai_e
 @patch("backend.routers.webhooks.fetch_one")
 @patch("backend.routers.webhooks.github_service")
 async def test_github_webhook_pr_merged(mock_github_service, mock_fetch_one, mock_changelog_service):
-    # Setup mocks
     mock_fetch_one.return_value = {
         "pr_number": 123,
         "repo": "test/repo",

@@ -33,7 +33,6 @@ class GitHubService:
                 try:
                     response = await client.request(method, url, headers=headers, **kwargs)
                     
-                    # Check for rate limit or server error
                     if response.status_code == 403 and "X-RateLimit-Remaining" in response.headers:
                         remaining = int(response.headers.get("X-RateLimit-Remaining", 0))
                         if remaining == 0:
@@ -58,7 +57,6 @@ class GitHubService:
                     if attempt == max_retries - 1:
                         raise e
             
-            # If we fall through the loop, try one last time
             return await client.request(method, url, headers=headers, **kwargs)
 
     async def get_pr_details(self, repo: str, pr_number: int) -> Dict[str, Any]:
@@ -94,7 +92,6 @@ class GitHubService:
         logger.info(f"Fetching raw diff for PR #{pr_number} on: {repo}")
         url = f"{self.base_url}/repos/{repo}/pulls/{pr_number}"
         
-        # Use custom headers to request raw unified diff
         headers = {"Accept": "application/vnd.github.v3.diff"}
         response = await self._request_with_backoff("GET", url, headers=headers)
         
@@ -163,14 +160,12 @@ class GitHubService:
             logger.info(f"Branch '{branch}' already exists in '{repo}'")
             return
             
-        # Get repository default branch name
         repo_url = f"{self.base_url}/repos/{repo}"
         res_repo = await self._request_with_backoff("GET", repo_url)
         default_branch = "main"
         if res_repo.status_code == 200:
             default_branch = res_repo.json().get("default_branch", "main")
             
-        # Get latest commit SHA of default branch
         default_ref_url = f"{self.base_url}/repos/{repo}/git/ref/heads/{default_branch}"
         res_default = await self._request_with_backoff("GET", default_ref_url)
         if res_default.status_code != 200:
@@ -182,7 +177,6 @@ class GitHubService:
             logger.error("Could not find commit SHA for default branch")
             return
             
-        # Create new branch ref pointing to that SHA
         create_ref_url = f"{self.base_url}/repos/{repo}/git/refs"
         payload = {
             "ref": f"refs/heads/{branch}",
@@ -210,13 +204,11 @@ class GitHubService:
         repo = target_repo or settings.CHANGELOG_REPO
         logger.info(f"Pushing content to repository {repo} on branch {branch} at path {path}")
         
-        # Ensure the branch exists first
         await self.ensure_branch_exists(repo, branch)
         
         url = f"{self.base_url}/repos/{repo}/contents/{path}"
         url_get = f"{url}?ref={branch}"
         
-        # Check if file already exists on this branch to get its SHA
         sha = None
         response = await self._request_with_backoff("GET", url_get)
         if response.status_code == 200:
@@ -228,7 +220,6 @@ class GitHubService:
             logger.error(f"Error checking file existence on branch {branch}: Status: {response.status_code} {response.reason_phrase}")
             response.raise_for_status()
 
-        # Prepare payload
         if isinstance(content, bytes):
             encoded_content = base64.b64encode(content).decode("utf-8")
         else:
@@ -242,7 +233,6 @@ class GitHubService:
         if sha:
             payload["sha"] = sha
 
-        # Push file content
         response = await self._request_with_backoff("PUT", url, json=payload)
         if response.status_code not in (200, 201):
             logger.error(f"Failed to push content: Status: {response.status_code} {response.reason_phrase}")

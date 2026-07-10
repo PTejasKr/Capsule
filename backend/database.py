@@ -9,7 +9,6 @@ from backend.config import settings
 
 logger = logging.getLogger("capsule.database")
 
-# Extract filepath from sqlite+aiosqlite:///./data/capsule.db or similar
 def get_db_path() -> str:
     url = settings.DATABASE_URL
     if url.startswith("sqlite+aiosqlite:///"):
@@ -17,10 +16,8 @@ def get_db_path() -> str:
     elif url.startswith("sqlite:///"):
         path = url.replace("sqlite:///", "")
     else:
-        # PostgreSQL doesn't need a local DB directory created
         return ""
     
-    # Ensure directory exists for SQLite
     dir_name = os.path.dirname(path)
     if dir_name and not os.path.exists(dir_name):
         try:
@@ -31,7 +28,6 @@ def get_db_path() -> str:
 
 DB_PATH = get_db_path()
 
-# Global postgres pool
 pg_pool = None
 
 def is_pg() -> bool:
@@ -52,7 +48,6 @@ async def get_pg_pool():
 def convert_placeholders(sql: str, is_postgres: bool) -> str:
     if not is_postgres:
         return sql
-    # Replace '?' with '$1', '$2', ...
     count = 1
     new_sql = []
     for part in sql.split('?'):
@@ -67,7 +62,6 @@ async def init_db():
         logger.info("Initializing PostgreSQL database...")
         pool = await get_pg_pool()
         async with pool.acquire() as conn:
-            # Create profiles
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS profiles (
                     id SERIAL PRIMARY KEY,
@@ -80,7 +74,6 @@ async def init_db():
                 )
             """)
 
-            # Create brd_versions
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS brd_versions (
                     id SERIAL PRIMARY KEY,
@@ -92,7 +85,6 @@ async def init_db():
                 )
             """)
 
-            # Create repository_mappings
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS repository_mappings (
                     source_repo TEXT PRIMARY KEY,
@@ -101,7 +93,6 @@ async def init_db():
                 )
             """)
             
-            # Create pr_analyses
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS pr_analyses (
                     pr_number INTEGER NOT NULL,
@@ -124,7 +115,6 @@ async def init_db():
             except Exception:
                 pass
             
-            # Create changelog_entries
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS changelog_entries (
                     id SERIAL PRIMARY KEY,
@@ -139,7 +129,6 @@ async def init_db():
                 )
             """)
             
-            # Create audit_log
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS audit_log (
                     id SERIAL PRIMARY KEY,
@@ -153,14 +142,12 @@ async def init_db():
                 )
             """)
             
-            # Seed default profile with ID=1 if not exists
             row = await conn.fetchrow("SELECT id FROM profiles WHERE id = 1")
             if not row:
                 await conn.execute("""
                     INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content)
                     VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')
                 """)
-                # Sync serialization sequence
                 try:
                     await conn.execute("SELECT setval('profiles_id_seq', 1)")
                 except Exception:
@@ -172,7 +159,6 @@ async def init_db():
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
             
-            # Create profiles
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,7 +171,6 @@ async def init_db():
                 )
             """)
 
-            # Create brd_versions
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS brd_versions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,7 +183,6 @@ async def init_db():
                 )
             """)
 
-            # Create repository_mappings
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS repository_mappings (
                     source_repo TEXT PRIMARY KEY,
@@ -208,7 +192,6 @@ async def init_db():
                 )
             """)
             
-            # Create pr_analyses
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS pr_analyses (
                     pr_number INTEGER NOT NULL,
@@ -231,7 +214,6 @@ async def init_db():
             except Exception:
                 pass
             
-            # Create changelog_entries
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS changelog_entries (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -246,7 +228,6 @@ async def init_db():
                 )
             """)
             
-            # Create audit_log
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS audit_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -260,7 +241,6 @@ async def init_db():
                 )
             """)
             
-            # Seed default profile with ID=1 if not exists
             async with db.execute("SELECT id FROM profiles WHERE id = 1") as cursor:
                 row = await cursor.fetchone()
             if not row:
@@ -358,8 +338,6 @@ async def insert(table: str, data: dict) -> int:
         elif table == "brd_versions":
             conflict_targets = ["hash"]
 
-        # Security: validate table and column names against a strict allowlist
-        # to prevent SQL injection through dynamic SQL construction. (Bandit B608)
         _ALLOWED_TABLES = {
             "pr_analyses", "profiles", "repository_mappings",
             "brd_versions", "changelog_entries", "audit_log"

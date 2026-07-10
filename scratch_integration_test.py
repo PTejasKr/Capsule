@@ -9,7 +9,6 @@ import os
 async def main():
     db_path = r"c:\Users\punya\Desktop\capsule\capsule.db"
     
-    # Check if there is a profile
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute("SELECT id, name FROM profiles LIMIT 1")
@@ -20,7 +19,6 @@ async def main():
         
     print(f"Using profile {profile[1]} (ID {profile[0]})")
     
-    # Map OS-Tracker repo to this profile if not mapped
     repo = "PTejasKr/OS-Tracker"
     cur.execute("SELECT id FROM repository_mappings WHERE source_repo = ?", (repo,))
     if not cur.fetchone():
@@ -63,9 +61,6 @@ async def main():
             print(f"Response status: {res.status_code}")
             print(f"Response body: {res.text}")
             
-            # Since it's async (Celery), the response will just be 'enqueued'.
-            # Wait for Celery? In this environment Celery is not running, so it won't actually process unless we run it synchronously.
-            # We can use the jenkins webhook which we modified to run sync if testing!
             print("\nSending via Jenkins webhook to force synchronous execution...")
             res2 = await client.post(
                 "http://localhost:8089/api/jenkins",

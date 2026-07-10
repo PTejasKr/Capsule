@@ -2,7 +2,6 @@ import sqlite3
 import asyncio
 from typing import Any
 
-# Simple stub mimicking aiosqlite's async API using the built‑in sqlite3 module.
 
 class Row(sqlite3.Row):
     """Alias for compatibility with aiosqlite.Row."""
@@ -42,9 +41,7 @@ class _CursorWrapper:
 
 class _ConnectionWrapper:
     def __init__(self, path: str):
-        # ``check_same_thread=False`` allows usage from different threads.
         self._conn = sqlite3.connect(path, check_same_thread=False)
-        # Default row factory; callers may override.
         self.row_factory = sqlite3.Row
         self._conn.row_factory = self.row_factory
 
@@ -59,7 +56,6 @@ class _ConnectionWrapper:
         """Execute a statement and return a cursor wrapper.
         The returned object supports ``async with`` and ``fetchone``/``fetchall``.
         """
-        # Set current connection row_factory to match connection setting
         self._conn.row_factory = self.row_factory
         return _CursorWrapper(self._conn, sql, params)
 
@@ -69,7 +65,6 @@ class _ConnectionWrapper:
     async def close(self):
         await asyncio.to_thread(self._conn.close)
 
-    # ``executemany`` and other helpers can be added if needed.
 
 def connect(path: str) -> _ConnectionWrapper:
     """Factory function mirroring ``aiosqlite.connect``.

@@ -1,5 +1,4 @@
 (function() {
-  // Check if we are on a GitHub PR page
   const prUrlRegex = /github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/;
   const match = window.location.href.match(prUrlRegex);
   if (!match) return;
@@ -11,21 +10,16 @@
 
   logger("Injected into PR Page. Initializing Capsule floating widget...");
 
-  // Prevent multiple injections
   if (document.getElementById("capsule-root")) return;
 
-  // Create Root Element
   const rootElement = document.createElement("div");
   rootElement.id = "capsule-root";
   document.body.appendChild(rootElement);
 
-  // Attach Shadow DOM
   const shadow = rootElement.attachShadow({ mode: "closed" });
 
-  // Stylesheet
   const style = document.createElement("style");
   style.textContent = `
-    /* Floating Widget Button */
     .capsule-badge-btn {
       position: fixed;
       bottom: 24px;
@@ -56,7 +50,6 @@
       height: 22px;
     }
 
-    /* Status Dot indicator */
     .status-dot {
       position: absolute;
       top: 2px;
@@ -72,7 +65,6 @@
     .status-dot.dot-minor { background-color: #d29922; }
     .status-dot.dot-major { background-color: #f85149; }
 
-    /* Side Panel */
     .capsule-side-panel {
       position: fixed;
       top: 0;
@@ -94,7 +86,6 @@
       right: 0;
     }
 
-    /* Side Panel Header */
     .panel-header {
       display: flex;
       justify-content: space-between;
@@ -130,7 +121,6 @@
       background-color: rgba(255, 255, 255, 0.05);
     }
 
-    /* Content Area */
     .panel-body {
       padding: 16px;
       overflow-y: auto;
@@ -140,7 +130,6 @@
       gap: 16px;
     }
 
-    /* Scrollbar */
     .panel-body::-webkit-scrollbar {
       width: 6px;
     }
@@ -152,7 +141,6 @@
       border-radius: 3px;
     }
 
-    /* Banners */
     .impact-banner {
       padding: 12px;
       border-radius: 6px;
@@ -181,7 +169,6 @@
     .impact-minor .impact-title { color: #e3b341; }
     .impact-major .impact-title { color: #ff7b72; }
 
-    /* Summary Card */
     .card {
       background-color: #161b22;
       border: 1px solid #30363d;
@@ -204,7 +191,6 @@
       color: #c9d1d9;
     }
 
-    /* Details Accordion */
     .section-title {
       font-size: 13px;
       font-weight: 600;
@@ -251,7 +237,6 @@
     .modified { background-color: rgba(210, 153, 34, 0.15); color: #d29922; }
     .deleted { background-color: rgba(248, 81, 73, 0.15); color: #f85149; }
 
-    /* Loading Skeletons */
     .skeleton {
       background-color: #30363d;
       height: 12px;
@@ -273,7 +258,6 @@
   `;
   shadow.appendChild(style);
 
-  // 1. Create Badge Button
   const badgeBtn = document.createElement("button");
   badgeBtn.className = "capsule-badge-btn";
   badgeBtn.title = "View Capsule PR Analysis";
@@ -287,7 +271,6 @@
   `;
   shadow.appendChild(badgeBtn);
 
-  // 2. Create Side Panel
   const sidePanel = document.createElement("div");
   sidePanel.className = "capsule-side-panel";
   sidePanel.innerHTML = `
@@ -342,7 +325,6 @@
   `;
   shadow.appendChild(sidePanel);
 
-  // Elements mapping inside Shadow DOM
   const closeBtn = shadow.getElementById("capsule-close");
   const loadingEl = shadow.getElementById("capsule-loading");
   const dataEl = shadow.getElementById("capsule-data");
@@ -357,7 +339,6 @@
 
   let summaryFetched = false;
 
-  // Toggle Panel open/close
   badgeBtn.addEventListener("click", () => {
     sidePanel.classList.toggle("open");
     if (sidePanel.classList.contains("open") && !summaryFetched) {
@@ -369,7 +350,6 @@
     sidePanel.classList.remove("open");
   });
 
-  // Background fetch
   async function fetchAnalysis() {
     loadingEl.classList.remove("hidden");
     dataEl.classList.add("hidden");
@@ -388,10 +368,8 @@
 
       const summary = response.data;
       
-      // Render
       summaryEl.textContent = summary.summary;
       
-      // Render impact
       const wf = summary.workflow_impact || {};
       bannerEl.className = "impact-banner"; // Reset
       statusDot.className = "status-dot";
@@ -421,7 +399,6 @@
         workflowsEl.innerHTML = "<p style='color:#8b949e;'>No changes to existing business requirement flows.</p>";
       }
 
-      // Render Changes
       changesEl.innerHTML = "";
       const changes = summary.changes || [];
       changes.forEach(c => {
@@ -447,7 +424,6 @@
     }
   }
 
-  // Pre-fetch status dot to color indicator on load
   async function checkStatusDot() {
     try {
       const response = await chrome.runtime.sendMessage({
@@ -463,11 +439,9 @@
         else statusDot.classList.add("dot-none");
       }
     } catch (e) {
-      // Slid silently
     }
   }
 
-  // Delay a bit to not block initial page rendering
   setTimeout(checkStatusDot, 2000);
 
   function logger(msg) {

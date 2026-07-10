@@ -18,7 +18,6 @@ from backend.config import settings
 from backend.worker import celery_app
 from backend.tasks import analyze_pr_task, generate_changelog_task
 
-# Import services
 from backend.services.github_service import GitHubService
 from backend.services.ai_engine import AIEngine
 from backend.services.brd_manager import BRDManager
@@ -26,7 +25,6 @@ from backend.services.changelog_service import ChangelogService
 from backend.database import insert, fetch_one
 from backend.services.pr_analysis import run_pr_analysis
 
-# Real instances for production (can be monkey-patched in tests)
 github_service = GitHubService()
 ai_engine = AIEngine()
 brd_manager = BRDManager()
@@ -36,7 +34,6 @@ logger = logging.getLogger("capsule.webhooks")
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
-# Helper to check if running in a test mock context
 def _is_mocked(obj) -> bool:
     if obj is None:
         return False
@@ -46,9 +43,6 @@ def _is_mocked(obj) -> bool:
     )
 
 def _use_sync_processing() -> bool:
-    # If any of the global placeholder services are mock objects, we are in a test.
-    # Also force sync processing in serverless environments like Vercel where 
-    # running background Celery workers is not supported.
     return (
         _is_mocked(github_service) or
         _is_mocked(ai_engine) or
@@ -58,9 +52,6 @@ def _use_sync_processing() -> bool:
         os.environ.get("VERCEL") == "1"
     )
 
-# ---------------------------------------------------------------------------
-# Task status helper
-# ---------------------------------------------------------------------------
 
 def _get_task_info(task_id: str) -> dict:
     """Safely fetch Celery task state without raising on pending tasks."""
@@ -77,9 +68,6 @@ def _get_task_info(task_id: str) -> dict:
     return info
 
 
-# ---------------------------------------------------------------------------
-# GitHub Webhook - async (non-blocking)
-# ---------------------------------------------------------------------------
 
 @router.post("/github", status_code=200, dependencies=[Depends(verify_github_signature)])
 async def github_webhook(request: Request, response: Response, x_github_event: str = Header(None)):
@@ -102,7 +90,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
     logger.info(f"GitHub webhook received - repo={repo} PR=#{pr_number} action={action}")
 
     try:
-        # Check if sandbox mock mode is active
         import os
         import json
         from datetime import datetime
@@ -144,7 +131,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
                     confidence_score=0.97
                 )
                 
-                # Persist to database
                 db_data = {
                     "pr_number": pr_number,
                     "repo": repo,
@@ -202,7 +188,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
         if _use_sync_processing():
             logger.info("Test context detected. Running webhook processing synchronously.")
             if action in ["opened", "reopened", "synchronize"]:
-                # resolve profile token
                 row = await fetch_one("SELECT p.github_token FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE ? LIKE rm.source_repo || '%'", (repo,))
                 gh_svc = GitHubService(token=row["github_token"]) if row and row.get("github_token") else github_service
                 
@@ -218,7 +203,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
             if action == "closed":
                 merged = payload.get("pull_request", {}).get("merged", False)
                 if merged:
-                    # Resolve summary from database
                     row = await fetch_one("SELECT * FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_number, repo))
                     if not row:
                         raise HTTPException(status_code=404, detail=f"No analysis found for PR #{pr_number} in {repo}")
@@ -256,7 +240,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
                     files_metadata = await github_service.get_pr_files(repo, pr_number)
                     changelog_entry = await changelog_service.generate_changelog(summary_obj, files_metadata)
                     
-                    # resolve profile token for push
                     p_row = await fetch_one("SELECT p.github_token, p.changelog_repo FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE ? LIKE rm.source_repo || '%'", (repo,))
                     gh_svc = GitHubService(token=p_row["github_token"]) if p_row and p_row.get("github_token") else github_service
                     changelog_svc = ChangelogService(gh_svc)
@@ -290,9 +273,6 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
         )
 
 
-# ---------------------------------------------------------------------------
-# Jenkins Webhook - async (non-blocking)
-# ---------------------------------------------------------------------------
 
 @router.post("/jenkins", status_code=200, dependencies=[Depends(verify_api_key)])
 async def jenkins_webhook(payload: JenkinsWebhookPayload, response: Response):
@@ -314,13 +294,9 @@ async def jenkins_webhook(payload: JenkinsWebhookPayload, response: Response):
 
 
 
-# ---------------------------------------------------------------------------
-# Task status poll endpoint
-# ---------------------------------------------------------------------------
 
 @router.get("/task/{task_id}")
 async def get_task_status(task_id: str, _: bool = Depends(verify_api_key)):
-    # Poll the status of an enqueued Celery task.
     info = _get_task_info(task_id)
     logger.debug(f"Task status poll - id={task_id} state={info['state']}")
     return info

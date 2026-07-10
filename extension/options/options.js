@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // --- AUTH LOGIC ---
   const authOverlay = document.getElementById("auth-overlay");
   const appContent = document.getElementById("app-content");
   const inputLoginBackendUrl = document.getElementById("input-login-backend-url");
@@ -7,12 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const authError = document.getElementById("auth-error");
   const btnGithubLogin = document.getElementById("btn-github-login");
 
-  // Load existing backend URL if any
   chrome.storage.local.get(["backendUrl", "apiKey"]).then(({ backendUrl, apiKey }) => {
     if (backendUrl) {
       inputLoginBackendUrl.value = backendUrl;
     }
-    // If already authenticated, show the enter dashboard button immediately
     if (apiKey) {
       btnGithubLogin.style.display = "none";
       btnEnterDashboard.style.display = "block";
@@ -53,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         await chrome.storage.local.set({ backendUrl });
         
-        // Fetch config
         const configRes = await fetch(`${backendUrl}/api/auth/extension/config`);
         if (!configRes.ok) throw new Error("Failed to fetch extension config");
         const config = await configRes.json();
@@ -83,7 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
             
             btnGithubLogin.innerHTML = 'Verifying org...';
             
-            // Send code to backend
             try {
               const verifyRes = await fetch(`${backendUrl}/api/auth/extension/login`, {
                 method: 'POST',
@@ -127,7 +122,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- TABS LOGIC ---
   const tabBtns = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
 
@@ -139,14 +133,12 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.classList.add("active");
       document.getElementById(btn.dataset.tab).classList.add("active");
 
-      // Auto-refresh profiles if switching to profiles or BRD tab
       if (btn.dataset.tab === "tab-profiles" || btn.dataset.tab === "tab-brd") {
         fetchProfiles();
       }
     });
   });
 
-  // --- CONNECTION TAB ---
   const inputApiUrl = document.getElementById("input-api-url");
   const inputApiKey = document.getElementById("input-api-key");
   
@@ -185,7 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- API HELPER ---
   async function apiCall(endpoint, method = "GET", body = null) {
     const { apiUrl, apiKey } = await chrome.storage.local.get(["apiUrl", "apiKey"]);
     const keyToUse = apiKey || "dev-bypass";
@@ -195,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     
     let options = { method, headers };
     
-    // Check if body is FormData (for file uploads) or normal JSON
     if (body instanceof FormData) {
       options.body = body;
     } else if (body) {
@@ -213,7 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return response.json();
   }
 
-  // --- PROFILES FETCHING ---
   async function fetchProfiles() {
     try {
       const profiles = await apiCall("/profiles");
@@ -238,7 +227,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- CREATE PROFILE ---
   document.getElementById("btn-create-prof").addEventListener("click", async () => {
     const name = document.getElementById("prof-name").value.trim();
     const changelog = document.getElementById("prof-changelog").value.trim();
@@ -257,7 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
       showStatus("status-create-prof", "Profile created successfully!", "success");
       fetchProfiles();
       
-      // Clear form
       document.getElementById("prof-name").value = "";
       document.getElementById("prof-changelog").value = "";
       document.getElementById("prof-token").value = "";
@@ -266,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- MAP REPOSITORY ---
   document.getElementById("btn-map-repo").addEventListener("click", async () => {
     const profId = document.getElementById("map-prof-select").value;
     const repo = document.getElementById("map-repo").value.trim();
@@ -285,7 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- DEPLOY WEBHOOK ---
   document.getElementById("btn-deploy-webhook").addEventListener("click", async () => {
     const profId = document.getElementById("deploy-prof-select").value;
     const repo = document.getElementById("deploy-repo").value.trim();
@@ -293,7 +278,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!profId || !repo) return showStatus("status-deploy", "Profile and Repo required", "error");
     
-    // Auto-generate URL if blank
     if (!url) {
       const { apiUrl } = await chrome.storage.local.get(["apiUrl"]);
       url = `${apiUrl}/webhooks/github?profile_id=${profId}`;
@@ -314,7 +298,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- BRD MANAGER ---
   const brdProfSelect = document.getElementById("brd-prof-select");
   
   brdProfSelect.addEventListener("change", fetchCurrentBRD);
@@ -371,7 +354,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- HISTORY TAB LOGIC ---
   const histProfSelect = document.getElementById("hist-prof-select");
   
   histProfSelect.addEventListener("change", fetchHistory);
@@ -409,7 +391,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     
     items.forEach(item => {
-      // Create a clean display element
       const el = document.createElement("div");
       el.style.padding = "12px";
       el.style.backgroundColor = "rgba(255, 255, 255, 0.4)";
@@ -433,7 +414,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
       
-      // Calculate diff in hours
       const diffHours = (now - analyzedAt) / (1000 * 60 * 60);
       
       if (diffHours < 24 && now.getDate() === analyzedAt.getDate()) {
@@ -447,7 +427,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
     
-    // Append to DOM
     if (groups.presentDay.length) {
       groups.presentDay.forEach(el => document.querySelector("#history-present-day .history-list").appendChild(el));
     } else {
@@ -473,7 +452,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // --- UTILS ---
   function showStatus(elementId, msg, type) {
     const el = document.getElementById(elementId);
     if (!el) return;

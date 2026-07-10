@@ -91,16 +91,13 @@ class ChangelogService:
         """
         logger.info(f"Generating changelog for PR #{pr_summary.pr_number}")
         
-        # Calculate additions/deletions from file metadata
         additions = sum(f.get("additions", 0) for f in files_metadata)
         deletions = sum(f.get("deletions", 0) for f in files_metadata)
 
-        # Retrieve latest version and increment it
         latest_ver = await self.get_latest_version()
         severity = pr_summary.workflow_impact.severity
         new_version = self._increment_version(latest_ver, severity)
         
-        # Compile lists of changes
         tech_changes = []
         for c in pr_summary.changes:
             tech_changes.append(f"[{c.file}:L{c.line_range}] {c.description}")
@@ -140,7 +137,6 @@ class ChangelogService:
         path = "changelog.txt"
         commit_message = f"chore(release): release version {entry.version} (PR #{entry.pr_number})"
         
-        # 1. Fetch current content of changelog.txt to prepend (from the changelog branch)
         existing_content = ""
         try:
             url = f"https://api.github.com/repos/{target_repo}/contents/{path}?ref=changelog"
@@ -156,13 +152,10 @@ class ChangelogService:
         except Exception as e:
             logger.warning(f"Could not read existing changelog.txt from branch changelog: {e}")
 
-        # 2. Format new entry
         new_entry_text = self._format_changelog_entry_text(entry)
         
-        # Prepend to existing content
         updated_content = new_entry_text + existing_content
         
-        # 3. Push back to GitHub (to changelog branch)
         result = await self.github_service.push_changelog(
             path,
             updated_content,
@@ -171,7 +164,6 @@ class ChangelogService:
             branch="changelog"
         )
 
-        # 4. Generate and push workflow diagram and individual summary markdown
         wf_desc = "Software development process flow chart"
         if entry.pr_number:
             try:
@@ -183,7 +175,6 @@ class ChangelogService:
             except Exception as e:
                 logger.warning(f"Could not fetch workflow description from DB: {e}")
 
-        # Generate diagram using Cloudflare Worker AI Stable Diffusion XL
         image_bytes = None
         if settings.CLOUDFLARE_WORKER_URL:
             try:
@@ -200,7 +191,6 @@ class ChangelogService:
             except Exception as ex:
                 logger.error(f"Failed to generate workflow diagram from Cloudflare Worker: {ex}")
 
-        # Push diagram to changelog branch
         if image_bytes:
             try:
                 image_path = f"diagrams/pr_{entry.pr_number}.png"
@@ -215,7 +205,6 @@ class ChangelogService:
             except Exception as e:
                 logger.error(f"Failed to push workflow diagram to changelog branch: {e}")
 
-        # Push summary markdown to changelog branch
         try:
             summary_md = f"# PR #{entry.pr_number} Summary\n\n"
             summary_md += f"- **Version**: {entry.version}\n"
@@ -247,7 +236,6 @@ class ChangelogService:
         except Exception as e:
             logger.error(f"Failed to push summary markdown to changelog branch: {e}")
 
-        # 5. Save to database
         db_data = {
             "version": entry.version,
             "date": entry.date,
@@ -259,7 +247,6 @@ class ChangelogService:
         }
         await insert("changelog_entries", db_data)
         
-        # 6. Create PR from changelog to main
         try:
             pr_title = f"chore(release): Update Changelog for v{entry.version}"
             pr_body = f"This PR was auto-generated to append the latest AI summaries and BRD comparisons for version {entry.version}."

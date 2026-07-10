@@ -1,6 +1,5 @@
 import os
 import sys
-# Resolve package paths for Vercel/serverless environments
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging
@@ -12,7 +11,6 @@ from backend.database import init_db
 from backend.services.brd_manager import BRDManager
 from backend.routers import webhooks, api, profiles, auth
 
-# Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -23,7 +21,6 @@ logging.basicConfig(
 
 logger = logging.getLogger("capsule.main")
 
-# Disable interactive API docs in production for security
 _IS_PRODUCTION = os.environ.get("ENV", "production").lower() == "production"
 _docs_url = None if _IS_PRODUCTION else "/docs"
 _redoc_url = None if _IS_PRODUCTION else "/redoc"
@@ -33,17 +30,14 @@ _openapi_url = None if _IS_PRODUCTION else "/openapi.json"
 async def lifespan(app: FastAPI):
     logger.info("Starting up Capsule API Service...")
     
-    # 1. Initialize SQLite Database Tables
     await init_db()
     
-    # 2. Pre-load/Initialize active BRD into memory for the default profile
     brd_manager = BRDManager()
     await brd_manager.load_brd(profile_id=1)
     
     logger.info("Capsule API Service successfully started and ready to handle requests.")
     yield
 
-# Initialize FastAPI App
 app = FastAPI(
     title="Capsule — PR Analyzer API",
     description="Backend service for AI-powered PR analysis, workflow impact detection, and changelog generation.",
@@ -54,9 +48,6 @@ app = FastAPI(
     openapi_url=_openapi_url,
 )
 
-# CORS — allow Chrome extension origins and the Vercel frontend.
-# Wildcard (*) with allow_credentials=True is rejected by browsers anyway
-# and violates OWASP A05; we restrict to known origins instead.
 ALLOWED_ORIGINS = [
     "https://capsule-opal-nine.vercel.app",
     "chrome-extension://",  # Chrome extension origins are validated by API key
@@ -77,7 +68,6 @@ app.include_router(webhooks.router, prefix="/api")
 app.include_router(api.router, prefix="/api")
 app.include_router(profiles.router, prefix="/api")
 
-# Alias route for GitHub Webhook to support GitHub configuration legacy/custom paths
 app.post("/api/webhook/github", status_code=200, dependencies=[Depends(verify_github_signature)])(webhooks.github_webhook)
 
 @app.get("/")

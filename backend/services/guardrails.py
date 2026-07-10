@@ -35,7 +35,6 @@ class GuardrailsService:
         summary_lower = summary.lower()
         matches = [kw for kw in topic_keywords if kw in summary_lower]
         
-        # If it contains at least one topic keyword or is very short, consider it relevant
         if len(matches) > 0 or len(summary) < 50:
             return True
             
@@ -50,7 +49,6 @@ class GuardrailsService:
         violations = []
         validated = ai_output.copy()
         
-        # 1. Enforce changes structure
         changes = validated.get("changes", [])
         if not isinstance(changes, list):
             violations.append("Changes field must be a list")
@@ -69,14 +67,11 @@ class GuardrailsService:
             description = change.get("description", "").strip()
             confidence = change.get("confidence", 1.0)
             
-            # Plausibility check: file path must be non-empty
             if not file:
                 violations.append(f"Change item {i} has an empty file reference")
                 continue
                 
-            # Plausibility check: line range parsing
             if line_range:
-                # Check for negative numbers or absurd values (e.g. > 100,000 lines)
                 num_matches = re.findall(r"\d+", line_range)
                 for num_str in num_matches:
                     val = int(num_str)
@@ -87,12 +82,10 @@ class GuardrailsService:
             else:
                 line_range = "unknown"
 
-            # Enforce enum values
             if change_type not in ["added", "modified", "deleted"]:
                 violations.append(f"Change item {i} has invalid change_type '{change_type}'")
                 change_type = "modified"
 
-            # Enforce confidence range
             try:
                 conf_val = float(confidence)
                 if conf_val < 0.0 or conf_val > 1.0:
@@ -102,7 +95,6 @@ class GuardrailsService:
                 violations.append(f"Change item {i} has non-numeric confidence: {confidence}")
                 confidence = 1.0
                 
-            # Check if file exists in diff
             normalized_file = file.replace("\\", "/")
             is_found = False
             for df in diff_files:
@@ -125,7 +117,6 @@ class GuardrailsService:
             
         validated["changes"] = validated_changes
 
-        # 2. Enforce workflow_impact structure
         wf = validated.get("workflow_impact", {})
         if not isinstance(wf, dict):
             violations.append("workflow_impact must be a dictionary")
@@ -146,7 +137,6 @@ class GuardrailsService:
             "after_state": wf.get("after_state", "")
         }
 
-        # 3. Overall confidence validation
         conf_score = validated.get("confidence_score", 1.0)
         try:
             val = float(conf_score)
@@ -154,7 +144,6 @@ class GuardrailsService:
         except (ValueError, TypeError):
             validated["confidence_score"] = 1.0
 
-        # 4. Check for leaked system instructions
         output_str = json.dumps(validated).lower()
         leak_keywords = ["system prompt", "you are an ai", "developer instructions", "ignore previous"]
         for kw in leak_keywords:
@@ -183,20 +172,17 @@ class GuardrailsService:
             file = change.get("file", "")
             confidence = change.get("confidence", 1.0)
             
-            # Simple string check: does the filename appear in the diff text?
             if file and file not in diff_content:
                 unreferenced_files += 1
                 
             if confidence < 0.7:
                 low_confidence_items += 1
                 
-        # Calculate components
         file_risk = (unreferenced_files / len(changes)) * 0.7
         conf_risk = (low_confidence_items / len(changes)) * 0.3
         
         risk = file_risk + conf_risk
         
-        # Overall confidence score adjustment
         overall_conf = ai_output.get("confidence_score", 1.0)
         if overall_conf < 0.8:
             risk = min(1.0, risk + (0.8 - overall_conf))

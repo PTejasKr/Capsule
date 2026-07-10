@@ -5,7 +5,6 @@ from typing import Optional
 from backend.models.schemas import PRSummary
 from backend.database import insert
 
-# Instantiate AI engine
 ai_engine = AIEngine()
 
 logger = logging.getLogger("capsule.pr_analysis")
@@ -13,7 +12,6 @@ logger = logging.getLogger("capsule.pr_analysis")
 from backend.services.github_service import GitHubService
 from backend.services.brd_manager import BRDManager
 
-# Default instances for production; can be overridden in unit tests.
 github_service = GitHubService()
 brd_manager = BRDManager()
 
@@ -42,19 +40,15 @@ async def run_pr_analysis(
     ai = ai_engine if ai_engine is not None else globals()["ai_engine"]
     brd_mngr = brd_manager if brd_manager is not None else globals()["brd_manager"]
 
-    # Fetch required PR information.
     pr_details = await gh.get_pr_details(repo, pr_number)
     title = pr_details.get("title", "")
     diff = await gh.get_pr_diff(repo, pr_number)
     
-    # Derive branch name from PR if not supplied.
     if branch_name is None:
         branch_name = pr_details.get("head_ref", "")
 
-    # Load the latest Business Requirements Document (BRD) content for default profile 1
     brd_content = await brd_mngr.load_brd(1)
 
-    # Perform the analysis using the AI engine.
     summary: PRSummary = await ai.analyze_pr(
         pr_number=pr_number,
         repo=repo,
@@ -64,9 +58,7 @@ async def run_pr_analysis(
         branch_name=branch_name,
     )
 
-    # Persist the result in the database.
     try:
-        # Construct summary dict aligned with database schema
         db_data = {
             "pr_number": pr_number,
             "repo": repo,
@@ -86,7 +78,6 @@ async def run_pr_analysis(
         logger.error(f"Failed to insert PR analysis result: {e}")
         raise
 
-    # Return the stored representation (including the generated id).
     result = summary.model_dump()
     result["id"] = record_id
     return result

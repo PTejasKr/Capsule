@@ -26,8 +26,6 @@ async def verify_github_signature(request: Request):
         return
 
     if not settings.GITHUB_WEBHOOK_SECRET:
-        # In production, a missing secret is a misconfiguration — reject the request.
-        # Only skip in a local dev environment where ENV=development is explicitly set.
         import os
         if os.environ.get("ENV", "production").lower() == "production":
             logger.error("GITHUB_WEBHOOK_SECRET is not configured. Rejecting webhook.")
@@ -46,10 +44,8 @@ async def verify_github_signature(request: Request):
             detail="Missing signature"
         )
 
-    # Payload must be read as raw bytes to calculate signature
     body = await request.body()
 
-    # Validate format before splitting
     if "=" not in signature_header:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,7 +80,6 @@ def validate_repo_name(repo: str) -> bool:
     """
     if not repo:
         return False
-    # Pattern: ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$
     pattern = re.compile(r"^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$")
     return bool(pattern.match(repo))
 
@@ -95,7 +90,6 @@ def sanitize_text(text: str) -> str:
     if not text:
         return ""
     
-    # 1. Block common prompt injection phrases by neutralising them
     injection_patterns = [
         r"(?i)ignore\s+(?:all\s+)?previous\s+instructions",
         r"(?i)system\s*:\s*",
@@ -109,12 +103,9 @@ def sanitize_text(text: str) -> str:
     for pattern in injection_patterns:
         sanitized = re.sub(pattern, "[CLEANED INJECTION ATTEMPT]", sanitized)
         
-    # 2. Prevent Base64 encoded payload attacks in code diffs or PR text
-    # (Matches long strings of letters/numbers ending in = or ==)
     base64_pattern = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
     sanitized = re.sub(base64_pattern, "[REMOVED POTENTIAL BASE64 PAYLOAD]", sanitized)
     
-    # 2.5 Redact potential secrets to prevent data leaks
     secret_patterns = [
         r"(?i)AKIA[0-9A-Z]{16}", # AWS Key
         r"(?i)ghp_[a-zA-Z0-9]{36}", # GitHub PAT
@@ -123,16 +114,9 @@ def sanitize_text(text: str) -> str:
     for pattern in secret_patterns:
         sanitized = re.sub(pattern, "[REDACTED SECRET]", sanitized)
     
-    # 3. Unicode Homoglyph Attack prevention
-    # We normalize any weird characters or replace non-standard lookalikes if needed.
-    # For simplicity, we filter out characters outside standard ASCII / UTF-8 code blocks 
-    # that are commonly used to mimic standard text (like cyrillic lookalikes).
-    # Specifically, look for characters in the cyrillic or mathematical alphanumeric range.
-    # We will log if suspicious unicode sequences are detected.
     suspicious_chars = re.compile(r"[\u0400-\u04FF\u0500-\u052F\u2100-\u214F\U0001D400-\U0001D7FF]")
     if suspicious_chars.search(sanitized):
         logger.warning("Detected potential unicode homoglyph character. Sanitizing to ASCII equivalents.")
-        # Replace cyrillic lookalikes with standard ascii if needed, or simply strip suspicious blocks
         sanitized = suspicious_chars.sub("[REMOVED HOMOGLYPH]", sanitized)
         
     return sanitized

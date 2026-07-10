@@ -10,7 +10,6 @@ class MultiProviderRouter:
     def __init__(self):
         self.providers = []
         
-        # 1. Gemini Free Tier (OpenAI Compatible)
         if settings.GEMINI_API_KEY:
             self.providers.append({
                 "name": "gemini",
@@ -21,7 +20,6 @@ class MultiProviderRouter:
                 "model": "gemini-1.5-flash"
             })
             
-        # 2. Groq Free Tier
         if settings.GROQ_API_KEY:
             self.providers.append({
                 "name": "groq",
@@ -32,7 +30,6 @@ class MultiProviderRouter:
                 "model": "llama-3.3-70b-versatile"
             })
             
-        # 3. NVIDIA NIM Free Tier
         if settings.NVIDIA_NIM_API_KEY:
             self.providers.append({
                 "name": "nvidia_nim",
@@ -43,7 +40,6 @@ class MultiProviderRouter:
                 "model": settings.NVIDIA_NIM_MODEL
             })
             
-        # 4. OpenRouter Free Tier
         if settings.OPENROUTER_API_KEY:
             self.providers.append({
                 "name": "openrouter",
@@ -54,9 +50,7 @@ class MultiProviderRouter:
                 "model": "meta-llama/llama-3-8b-instruct:free"
             })
             
-        # 5. Ollama (Local)
         if settings.OLLAMA_BASE_URL:
-            # Check if ollama URL is reachable? For now just append it.
             self.providers.append({
                 "name": "ollama",
                 "client": AsyncOpenAI(
@@ -103,8 +97,6 @@ class MultiProviderRouter:
                     "max_tokens": max_tokens,
                 }
                 
-                # Gemini and OpenRouter may have strict handling for response_format. 
-                # We'll pass it if requested, except for Ollama which may not fully support json_object in older versions.
                 if response_format and name != "ollama":
                     kwargs["response_format"] = response_format
                     
@@ -114,7 +106,6 @@ class MultiProviderRouter:
                 return content
                 
             except Exception as e:
-                # HTTP errors typically have status code if thrown by httpx/openai client
                 error_msg = str(e)
                 logger.warning(f"Provider {name} failed: {error_msg}. Switching to next provider...")
                 last_error = e

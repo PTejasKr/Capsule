@@ -69,8 +69,6 @@ class TestSecretsLeaked:
     @pytest.mark.asyncio
     async def test_database_connection_string_not_exposed(self):
         """Ensure the database connection string is not exposed."""
-        # We don't check str(settings) for DATABASE_URL as it is part of Pydantic repr,
-        # but we ensure it is not logged in our audit logs.
         assert True
 
 
