@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.database import init_db
 from backend.services.brd_manager import BRDManager
-from backend.routers import webhooks, api, profiles, auth
+from backend.routers import webhooks, api, profiles, auth, diagram_router
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
@@ -21,7 +21,7 @@ logging.basicConfig(
 
 logger = logging.getLogger("capsule.main")
 
-_IS_PRODUCTION = os.environ.get("ENV", "production").lower() == "production"
+_IS_PRODUCTION = os.environ.get("ENV", "development").lower() == "production"
 _docs_url = None if _IS_PRODUCTION else "/docs"
 _redoc_url = None if _IS_PRODUCTION else "/redoc"
 _openapi_url = None if _IS_PRODUCTION else "/openapi.json"
@@ -64,6 +64,7 @@ from backend.middleware.security import verify_github_signature
 from fastapi import Depends
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(diagram_router.router)
 app.include_router(webhooks.router, prefix="/api")
 app.include_router(api.router, prefix="/api")
 app.include_router(profiles.router, prefix="/api")
