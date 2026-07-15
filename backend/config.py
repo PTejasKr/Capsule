@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     API_KEY: str = Field("test_api_key_placeholder", description="API key used to authenticate requests from Chrome Extension")
 
     GITHUB_TOKEN: str = Field("test_github_token_placeholder", description="GitHub Personal Access Token with repo scope")
-    GITHUB_WEBHOOK_SECRET: str = Field("", description="Secret for validating webhook HMAC signatures")
+    GITHUB_WEBHOOK_SECRET: str = Field("test_github_webhook_secret_placeholder", description="Secret for validating webhook HMAC signatures")
     CHANGELOG_REPO: str = Field("test/changelog_repo", description="Separate repository name (owner/repo) where changelog.txt is pushed")
     GITHUB_CLIENT_ID: str = Field("", description="GitHub OAuth App Client ID")
     GITHUB_CLIENT_SECRET: str = Field("", description="GitHub OAuth App Client Secret")
