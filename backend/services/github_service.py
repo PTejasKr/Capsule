@@ -82,7 +82,8 @@ class GitHubService:
             "base_ref": data.get("base", {}).get("ref", ""),
             "head_ref": data.get("head", {}).get("ref", ""),
             "user": data.get("user", {}).get("login", ""),
-            "html_url": data.get("html_url", "")
+            "html_url": data.get("html_url", ""),
+            "merged_at": data.get("merged_at", "")
         }
 
     async def get_pr_diff(self, repo: str, pr_number: int) -> str:

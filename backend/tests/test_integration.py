@@ -50,8 +50,20 @@ async def test_github_webhook_open(mock_run_pr_analysis):
 
 
 @pytest.mark.asyncio
+@patch("backend.routers.webhooks.fetch_one")
+@patch("backend.routers.webhooks.github_service")
 @patch("backend.routers.webhooks.changelog_service")
-async def test_github_webhook_close_merged(mock_changelog_service):
+async def test_github_webhook_close_merged(mock_changelog_service, mock_github_service, mock_fetch_one):
+    mock_fetch_one.return_value = {
+        "pr_number": 124,
+        "repo": "testorg/testrepo",
+        "title": "Test PR",
+        "summary": "Summary",
+        "changes_json": "[]",
+        "workflow_impact_json": '{"has_impact": false, "severity": "none", "impact_description": "", "affected_workflows": [], "before_state": "", "after_state": ""}',
+        "confidence_score": 0.9
+    }
+    mock_github_service.get_pr_files = AsyncMock(return_value=[{"additions": 10, "deletions": 5}])
     mock_entry = ChangelogEntry(
         version="v1.0.1",
         date="2026-06-17",

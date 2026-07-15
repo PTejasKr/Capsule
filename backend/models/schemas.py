@@ -39,6 +39,8 @@ class PRSummary(BaseModel):
     workflow_impact: WorkflowImpact = Field(..., description="Analysis of changes against the BRD workflows")
     confidence_score: float = Field(..., description="Overall confidence score of the analysis")
     analyzed_at: Optional[str] = Field(None, description="ISO timestamp of when the analysis was performed")
+    author: Optional[str] = Field(None, description="The GitHub account that created/pushed the PR")
+    merged_at: Optional[str] = Field(None, description="ISO timestamp of when the PR was integrated")
 
 class ChangelogEntry(BaseModel):
     version: str = Field(..., description="Semantic version string, e.g., 'v1.0.1'")

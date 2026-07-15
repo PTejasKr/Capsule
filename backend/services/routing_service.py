@@ -75,7 +75,7 @@ class MultiProviderRouter:
             raise RuntimeError("No AI providers configured in settings.")
             
         providers_to_try = self.providers
-        if specific_provider:
+        if specific_provider and specific_provider != "multi-provider":
             providers_to_try = [p for p in self.providers if p["name"] == specific_provider]
             if not providers_to_try:
                 raise ValueError(f"Requested provider '{specific_provider}' is not configured.")

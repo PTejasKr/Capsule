@@ -108,7 +108,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (!isGithubPR) {
-      document.getElementById("tab-dashboard").click();
+      if (document.getElementById("tab-pr").classList.contains("active")) {
+        showState(stateNoPr);
+      } else {
+        document.getElementById("tab-dashboard").click();
+      }
       return;
     }
 
@@ -239,7 +243,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const tabs = [
     { button: document.getElementById("tab-dashboard"), panel: document.getElementById("panel-dashboard"), onShow: loadDashboard },
-    { button: document.getElementById("tab-pr"), panel: document.getElementById("panel-pr") },
+    { button: document.getElementById("tab-pr"), panel: document.getElementById("panel-pr"), onShow: loadPrAnalysis },
     { button: document.getElementById("tab-weekly"), panel: document.getElementById("panel-weekly"), onShow: loadWeeklyChanges },
     { button: document.getElementById("tab-workflow"), panel: document.getElementById("panel-workflow"), onShow: loadCurrentBrdWorkflow }
   ];
@@ -515,6 +519,28 @@ document.addEventListener("DOMContentLoaded", async () => {
           li.style.borderLeft = "3px solid var(--accent-blue)";
           li.style.paddingLeft = "8px";
           li.style.marginBottom = "10px";
+
+          let dateStr = "";
+          if (s.merged_at) {
+            try {
+              const date = new Date(s.merged_at);
+              dateStr = date.toLocaleString();
+            } catch (e) {
+              dateStr = s.merged_at;
+            }
+          } else if (s.analyzed_at) {
+            try {
+              const date = new Date(s.analyzed_at);
+              dateStr = date.toLocaleString();
+            } catch (e) {
+              dateStr = s.analyzed_at;
+            }
+          } else {
+            dateStr = "Not integrated yet";
+          }
+
+          const authorText = s.author ? `@${s.author}` : "unknown";
+
           li.innerHTML = `
             <div class="change-header">
               <span class="change-file" style="font-weight:600;">${s.repo} (PR #${s.pr_number})</span>
@@ -522,6 +548,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
             <div class="change-desc" style="font-weight:500; margin-top:4px;">${s.title}</div>
             <div class="change-desc" style="color:var(--text-muted); font-size:12px; margin-top:4px;">${s.summary}</div>
+            <div class="change-meta" style="color:var(--text-muted); font-size:11px; margin-top:6px; display:flex; justify-content:space-between; border-top:1px solid #30363d; padding-top:4px;">
+              <span>👤 ${authorText}</span>
+              <span>📅 ${dateStr}</span>
+            </div>
           `;
           weeklyList.appendChild(li);
         });

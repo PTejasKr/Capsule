@@ -71,6 +71,8 @@ async def run_pr_analysis(
             "changes_json": json.dumps([c.model_dump() for c in summary.changes]),
             "workflow_impact_json": json.dumps(summary.workflow_impact.model_dump()),
             "confidence_score": summary.confidence_score,
+            "author": pr_details.get("user", ""),
+            "merged_at": pr_details.get("merged_at", "")
         }
         record_id = await insert("pr_analyses", db_data)
         logger.info(f"PR analysis persisted with id {record_id}")

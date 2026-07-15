@@ -54,7 +54,9 @@ async def _reconstruct_summary_from_row(row: dict) -> PRSummary:
         summary=row["summary"],
         changes=changes,
         workflow_impact=workflow_impact,
-        confidence_score=row["confidence_score"]
+        confidence_score=row["confidence_score"],
+        author=row.get("author"),
+        merged_at=row.get("merged_at")
     )
 
 @router.get("/health")

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.database import init_db
 from backend.services.brd_manager import BRDManager
-from backend.routers import webhooks, api, profiles, auth, diagram_router
+from backend.routers import webhooks, api, profiles, auth
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
@@ -64,7 +64,7 @@ from backend.middleware.security import verify_github_signature
 from fastapi import Depends
 
 app.include_router(auth.router, prefix="/api")
-app.include_router(diagram_router.router)
+app.include_router(webhooks.router)
 app.include_router(webhooks.router, prefix="/api")
 app.include_router(api.router, prefix="/api")
 app.include_router(profiles.router, prefix="/api")

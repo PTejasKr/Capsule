@@ -107,11 +107,21 @@ async def init_db():
                     workflow_impact_json TEXT,
                     confidence_score REAL,
                     analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    author TEXT,
+                    merged_at TEXT,
                     PRIMARY KEY (pr_number, repo)
                 )
             """)
             try:
                 await conn.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN author TEXT;")
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN merged_at TEXT;")
             except Exception:
                 pass
             
@@ -206,11 +216,21 @@ async def init_db():
                     workflow_impact_json TEXT,
                     confidence_score REAL,
                     analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    author TEXT,
+                    merged_at TEXT,
                     PRIMARY KEY (pr_number, repo)
                 )
             """)
             try:
                 await db.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+            except Exception:
+                pass
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN author TEXT;")
+            except Exception:
+                pass
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN merged_at TEXT;")
             except Exception:
                 pass
             
