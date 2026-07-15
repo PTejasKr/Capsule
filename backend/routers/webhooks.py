@@ -203,6 +203,13 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
             if action == "closed":
                 merged = payload.get("pull_request", {}).get("merged", False)
                 if merged:
+                    merged_at_str = payload.get("pull_request", {}).get("merged_at", "")
+                    author_str = payload.get("pull_request", {}).get("user", {}).get("login", "")
+                    from backend.database import execute
+                    await execute(
+                        "UPDATE pr_analyses SET merged_at = ?, author = ? WHERE pr_number = ? AND repo = ?",
+                        (merged_at_str, author_str, pr_number, repo)
+                    )
                     row = await fetch_one("SELECT * FROM pr_analyses WHERE pr_number = ? AND repo = ?", (pr_number, repo))
                     if not row:
                         raise HTTPException(status_code=404, detail=f"No analysis found for PR #{pr_number} in {repo}")
@@ -241,12 +248,17 @@ async def github_webhook(request: Request, response: Response, x_github_event: s
                     changelog_entry = await changelog_service.generate_changelog(summary_obj, files_metadata)
                     
                     p_row = await fetch_one("SELECT p.github_token, p.changelog_repo FROM profiles p JOIN repository_mappings rm ON p.id = rm.profile_id WHERE ? LIKE rm.source_repo || '%'", (repo,))
-                    gh_svc = GitHubService(token=p_row["github_token"]) if p_row and p_row.get("github_token") else github_service
-                    changelog_svc = ChangelogService(gh_svc)
+                    if p_row and p_row.get("github_token"):
+                        gh_svc = GitHubService(token=p_row["github_token"])
+                        changelog_svc = ChangelogService(gh_svc)
+                    else:
+                        changelog_svc = changelog_service
                     
                     target_repo = p_row["changelog_repo"] if p_row and p_row.get("changelog_repo") else settings.CHANGELOG_REPO
-                    
-                    push_res = await changelog_svc.push_changelog(changelog_entry, target_repo=target_repo)
+                    if target_repo:
+                        push_res = await changelog_svc.push_changelog(changelog_entry, target_repo=target_repo)
+                    else:
+                        push_res = await changelog_svc.push_changelog(changelog_entry)
                     return {"status": "changelog_pushed", "version": changelog_entry.version, "push_result": push_res}
 
             return {"status": "ignored_action", "action": action}

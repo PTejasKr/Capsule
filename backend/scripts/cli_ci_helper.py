@@ -59,8 +59,8 @@ def run_analysis(args):
     github_token = args.github_token or os.environ.get("GITHUB_TOKEN")
     
     if not api_key:
-        print("Error: Capsule API Key is required. Set CAPSULE_API_KEY environment variable or pass --api-key.")
-        sys.exit(1)
+        print("Warning: CAPSULE_API_KEY is not configured. Skipping Capsule PR analysis.")
+        sys.exit(0)
         
     print(f"Triggering Capsule PR analysis for {args.repo} PR #{args.pr}...")
     trigger_url = f"{api_url}/webhooks/jenkins"
@@ -177,8 +177,8 @@ def run_merge(args):
     api_key = args.api_key or os.environ.get("CAPSULE_API_KEY")
     
     if not api_key:
-        print("Error: Capsule API Key is required for merge changelog publishing.")
-        sys.exit(1)
+        print("Warning: Capsule API Key is not configured. Skipping merge changelog publishing.")
+        sys.exit(0)
         
     print(f"Publishing release changelog for merged PR #{args.pr}...")
     merge_url = f"{api_url}/api/pr/{args.pr}/generate-changelog?repo={urllib.parse.quote(args.repo)}"

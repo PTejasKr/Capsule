@@ -104,6 +104,8 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
         "changes_json":         json.dumps([c.model_dump() for c in summary.changes]),
         "workflow_impact_json": json.dumps(summary.workflow_impact.model_dump()),
         "confidence_score":     summary.confidence_score,
+        "author":               pr_details.get("user", ""),
+        "merged_at":            pr_details.get("merged_at", "")
     })
 
     return summary.model_dump()
@@ -121,6 +123,16 @@ async def _core_changelog(repo: str, pr_number: int) -> dict:
 
     github_service = GitHubService()
     changelog_service = ChangelogService(github_service)
+
+    try:
+        pr_details = await github_service.get_pr_details(repo, pr_number)
+        from backend.database import execute
+        await execute(
+            "UPDATE pr_analyses SET merged_at = ?, author = ? WHERE pr_number = ? AND repo = ?",
+            (pr_details.get("merged_at", ""), pr_details.get("user", ""), pr_number, repo)
+        )
+    except Exception as e:
+        logger.warning(f"Could not update merged_at/author for PR #{pr_number}: {e}")
 
     sql = "SELECT * FROM pr_analyses WHERE pr_number = ? AND repo = ?"
     row = await fetch_one(sql, (pr_number, repo))

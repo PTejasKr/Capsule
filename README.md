@@ -99,6 +99,12 @@ graph TD
 - No styling conflicts (Shadow DOM isolated)
 - Shows summaries without page reload
 - **Admin Console**: Edit generated summaries, trigger auto-repairs, compare summaries, and approve/reject directly from the UI
+- **Weekly Changes Metadata**: Displays the integration (merge) timestamp and the GitHub account that pushed/created each PR inside the weekly summary feed.
+
+### 📊 Workflow Diagram Generator
+- Renders workflow diagrams automatically from text descriptions or PR summaries using Mermaid.js and QuickChart
+- Accessible via the `/api/workflow/diagram` backend endpoint
+- Fully integrated into the Chrome extension popup tab for visual pipeline inspection
 
 ### 🛠️ Capsule Multi-Agent Loop
 - Multi-agent orchestration loop (`Architect`, `Coder`, and `Debugger` modes)
